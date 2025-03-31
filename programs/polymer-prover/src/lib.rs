@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+pub mod error;
 pub mod instructions;
 pub mod state;
 
@@ -10,7 +11,15 @@ declare_id!("B9cX6RY34xmsvSYwNfrzvtbuQTfoUw7ah6qAgawgwYEL");
 
 #[program]
 pub mod polymer_prover {
+
     use super::*;
+
+    #[derive(AnchorSerialize, AnchorDeserialize)]
+    pub struct ParsedEvent {
+        pub emitting_contract: [u8; 20],
+        pub topics: Vec<u8>,
+        pub unindexed_data: Vec<u8>,
+    }
 
     pub fn initialize(
         ctx: Context<Initialize>,
@@ -30,15 +39,30 @@ pub mod polymer_prover {
         Ok(())
     }
 
-    pub fn validate_event(ctx: Context<ValidateEvent>, proof: Vec<u8>) -> Result<()> {
+    pub fn validate_event(ctx: Context<ValidateEvent>, proof: Vec<u8>) -> Result<ParsedEvent> {
         let account = &ctx.accounts.event_account;
-        Ok(validate_event::handler(
+
+        match validate_event::handler(
             &account.client_type,
             &account.signer_addr,
             account.peptide_chain_id,
             proof,
-        )?)
+        ) {
+            Ok(event) => Ok(ParsedEvent {
+                emitting_contract: *event.emitting_contract.as_bytes(),
+                unindexed_data: event.unindexed_data,
+                topics: event.topics,
+            }),
+            Err(e) => Err(e.into()),
+        }
     }
+
+    // pub fn parse_event(_ctx: Context<ParseEvent>, event: Vec<u8>, num_topics: usize) -> Result<()> {
+    //     // TODO
+    //     // set_return_data(key.as_bytes());
+    //     // Ok(parse_event::handler(event.as_slice(), num_topics)?)
+    //     Ok(())
+    // }
 }
 
 #[derive(Accounts)]
@@ -60,12 +84,5 @@ pub struct ValidateEvent<'info> {
     pub event_account: Account<'info, EventAccount>,
 }
 
-#[error_code]
-pub enum ProverError {
-    #[msg("The provided signature is invalid.")]
-    InvalidSignature,
-    #[msg("The signer is unknown.")]
-    UnknownSigner,
-    #[msg("The provided address is invalid.")]
-    InvalidAddress,
-}
+#[derive(Accounts)]
+pub struct ParseEvent {}

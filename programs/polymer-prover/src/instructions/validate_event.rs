@@ -1,41 +1,17 @@
 use std::usize;
 
-use crate::ProverError;
+use crate::error::ProverError;
+use crate::instructions::parse_event::{self, EthAddress, EthEvent};
 use anchor_lang::solana_program::{keccak, secp256k1_recover::secp256k1_recover};
 use sha2::{Digest, Sha256};
 use sha3::Keccak256;
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct EthAddress([u8; 20]);
-
-impl EthAddress {
-    pub fn from_bytes(bytes: &[u8; 20]) -> Result<Self, ()> {
-        Ok(EthAddress(*bytes))
-    }
-
-    /// Converts a hex string (with or without "0x" prefix) into an EthAddress.
-    pub fn from_hex(str: &str) -> Result<Self, ()> {
-        let mut addr = [0u8; 20];
-        let _ = hex::decode_to_slice(str.trim_start_matches("0x"), &mut addr as &mut [u8]);
-        Ok(EthAddress(addr))
-    }
-
-    /// Returns the address as a byte array.
-    pub fn as_bytes(&self) -> &[u8; 20] {
-        &self.0
-    }
-
-    pub fn to_string(&self) -> String {
-        hex::encode(&self.0)
-    }
-}
 
 pub fn handler(
     client_type: &String,
     signer_addr: &[u8; 20],
     peptide_chain_id: u64,
     proof: Vec<u8>,
-) -> Result<(), ProverError> {
+) -> Result<EthEvent, ProverError> {
     let eth_addr = EthAddress::from_bytes(signer_addr).unwrap();
 
     println!("client type: {}", client_type);
@@ -52,7 +28,7 @@ pub fn handler(
         &<[u8; 64]>::try_from(&proof[32..96]).unwrap(),
         proof[96],
     ) {
-        return Err(ProverError::InvalidSignature.into());
+        return Err(ProverError::InvalidSignature);
     }
 
     let event_end: usize =
@@ -75,10 +51,12 @@ pub fn handler(
     };
 
     if !verify_membership(app_hash, key.as_bytes(), &value.0, &proof[event_end..]) {
-        return Err(ProverError::InvalidSignature.into());
+        return Err(ProverError::InvalidSignature);
     }
 
-    Ok(())
+    let raw_event = &proof[123..event_end];
+    let num_topics: usize = proof[120].into();
+    parse_event::handler(raw_event, num_topics)
 }
 
 fn verify_signature(
