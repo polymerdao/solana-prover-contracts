@@ -59,14 +59,15 @@ describe("initialize", () => {
       fs.readFileSync('programs/polymer-prover/src/instructions/test-data/op-event-small.json', 'utf-8')
     );
 
-    const event = new anchor.BorshCoder(program.rawIdl).types.decode('ParsedEvent', buffer);
+    const result = new anchor.BorshCoder(program.rawIdl).types.decode('ValidateEventResult', buffer);
 
     let topics = Buffer.alloc(0);
     expectedEvent.topics.map((topic: string) => topics = Buffer.concat([topics, Buffer.from(topic.slice(2), 'hex')]))
 
-    assert.equal(expectedEvent.address.slice(2), Buffer.from(event.emitting_contract).toString('hex'));
-    assert.equal(Buffer.from(topics).toString('hex'), Buffer.from(event.topics).toString('hex'));
-    assert.equal(expectedEvent.data.slice(2), Buffer.from(event.unindexed_data).toString('hex'));
+    assert.equal(84_532, result.chain_id);
+    assert.equal(expectedEvent.address.slice(2), Buffer.from(result.emitting_contract).toString('hex'));
+    assert.equal(Buffer.from(topics).toString('hex'), Buffer.from(result.topics).toString('hex'));
+    assert.equal(expectedEvent.data.slice(2), Buffer.from(result.unindexed_data).toString('hex'));
   });
 });
 

@@ -25,8 +25,8 @@ impl EthAddress {
         &self.0
     }
 
-    pub fn to_string(&self) -> String {
-        hex::encode(&self.0)
+    pub fn to_hex(&self) -> String {
+        "0x".to_owned() + &hex::encode(&self.0)
     }
 }
 

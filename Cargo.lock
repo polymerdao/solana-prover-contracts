@@ -2031,6 +2031,8 @@ dependencies = [
  "bytemuck_derive",
  "hex",
  "mollusk-svm",
+ "serde",
+ "serde_json",
  "sha2 0.10.8",
  "sha3",
  "solana-program",

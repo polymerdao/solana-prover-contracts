@@ -11,13 +11,8 @@ pub fn handler(
     signer_addr: &[u8; 20],
     peptide_chain_id: u64,
     proof: Vec<u8>,
-) -> Result<EthEvent, ProverError> {
+) -> Result<(u32, EthEvent), ProverError> {
     let eth_addr = EthAddress::from_bytes(signer_addr).unwrap();
-
-    println!("client type: {}", client_type);
-    println!("signer addr: {:?}", eth_addr.to_string());
-    println!("chain id:    {}", peptide_chain_id);
-
     let app_hash = &<[u8; 32]>::try_from(&proof[0..32]).unwrap();
 
     if !verify_signature(
@@ -34,16 +29,16 @@ pub fn handler(
     let event_end: usize =
         u16::from_be_bytes(<[u8; 2]>::try_from(&proof[121..123]).unwrap()).into();
 
+    let chain_id = u32::from_be_bytes(<[u8; 4]>::try_from(&proof[97..101]).unwrap());
     let key = format!(
         "chain/{}/storedLogs/{}/{}/{}/{}",
-        u32::from_be_bytes(<[u8; 4]>::try_from(&proof[97..101]).unwrap()),
+        chain_id,
         client_type,
         u64::from_be_bytes(<[u8; 8]>::try_from(&proof[109..117]).unwrap()),
         u16::from_be_bytes(<[u8; 2]>::try_from(&proof[117..119]).unwrap()),
         proof[119],
     );
 
-    println!("key {}", key);
     let value = {
         let mut hasher = keccak::Hasher::default();
         hasher.hash(&proof[123..event_end]);
@@ -56,7 +51,8 @@ pub fn handler(
 
     let raw_event = &proof[123..event_end];
     let num_topics: usize = proof[120].into();
-    parse_event::handler(raw_event, num_topics)
+
+    Ok((chain_id, parse_event::handler(raw_event, num_topics)?))
 }
 
 fn verify_signature(
@@ -101,9 +97,6 @@ fn verify_membership(app_hash: &[u8; 32], key: &[u8], value: &[u8; 32], proof: &
         hasher.finalize()
     };
 
-    println!("value        {:?}", hex::encode(value));
-    println!("hashed_value {:?}", hex::encode(hashed_value));
-
     let mut pre_hash = {
         let mut hasher = Sha256::new();
         hasher.update(&proof[2..path_zero_start]);
@@ -126,8 +119,6 @@ fn verify_membership(app_hash: &[u8; 32], key: &[u8], value: &[u8; 32], proof: &
         offset = offset + suffix_end;
     }
 
-    println!("pre_hash {:?}", hex::encode(pre_hash.as_slice()));
-    println!("app_hash {:?}", hex::encode(app_hash));
     pre_hash.as_slice() == *app_hash
 }
 
@@ -143,32 +134,59 @@ fn u64_to_32_bytes_array(input: u64) -> [u8; 32] {
 mod tests {
     use super::*;
     use hex;
-    use std::fs::File;
-    use std::io::Read;
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize)]
+    struct Event {
+        address: String,
+        data: String,
+        topics: Vec<String>,
+    }
 
     #[test]
     fn test_validate_event() {
-        let proof = read_and_decode_proof_file("src/instructions/test-data/op-proof-v2.hex")
+        let proof = read_and_decode_proof_file("src/instructions/test-data/op-proof-small.hex")
             .expect("could not read proof file");
+        let expected_event =
+            read_and_decode_event_file("src/instructions/test-data/op-event-small.json")
+                .expect("could not read proof file");
 
         let client_type = "proof_api";
         let addr = EthAddress::from_hex("8D3921B96A3815F403Fb3a4c7fF525969d16f9E0").unwrap();
         let peptide_chain_id = 901;
 
-        handler(
+        let (chain_id, event) = handler(
             &client_type.to_string(),
             addr.as_bytes(),
             peptide_chain_id,
             proof,
         )
         .expect("invalid proof");
+
+        assert_eq!(84_532, chain_id);
+        let mut topics: Vec<u8> = Vec::new();
+        expected_event
+            .topics
+            .iter()
+            .for_each(|t| topics.extend(hex::decode(t.trim_start_matches("0x")).unwrap()));
+
+        assert_eq!(topics, event.topics);
+        assert_eq!(expected_event.address, event.emitting_contract.to_hex());
+        assert_eq!(
+            hex::decode(expected_event.data.trim_start_matches("0x")).unwrap(),
+            event.unindexed_data
+        );
     }
 
     fn read_and_decode_proof_file(file_path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        let mut file = File::open(file_path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+        let contents = std::fs::read_to_string(file_path).expect("could not read hex file");
         let decoded = hex::decode(&contents.trim().as_bytes()[2..])?;
         Ok(decoded)
+    }
+
+    fn read_and_decode_event_file(file_path: &str) -> Result<Event, Box<dyn std::error::Error>> {
+        let contents = std::fs::read_to_string(file_path).expect("could not read json file");
+        let event: Event = serde_json::from_str(&contents).expect("error parsing JSON");
+        Ok(event)
     }
 }

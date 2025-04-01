@@ -15,7 +15,8 @@ pub mod polymer_prover {
     use super::*;
 
     #[derive(AnchorSerialize, AnchorDeserialize)]
-    pub struct ParsedEvent {
+    pub struct ValidateEventResult {
+        pub chain_id: u32,
         pub emitting_contract: [u8; 20],
         pub topics: Vec<u8>,
         pub unindexed_data: Vec<u8>,
@@ -39,7 +40,10 @@ pub mod polymer_prover {
         Ok(())
     }
 
-    pub fn validate_event(ctx: Context<ValidateEvent>, proof: Vec<u8>) -> Result<ParsedEvent> {
+    pub fn validate_event(
+        ctx: Context<ValidateEvent>,
+        proof: Vec<u8>,
+    ) -> Result<ValidateEventResult> {
         let account = &ctx.accounts.event_account;
 
         match validate_event::handler(
@@ -48,7 +52,8 @@ pub mod polymer_prover {
             account.peptide_chain_id,
             proof,
         ) {
-            Ok(event) => Ok(ParsedEvent {
+            Ok((chain_id, event)) => Ok(ValidateEventResult {
+                chain_id,
                 emitting_contract: *event.emitting_contract.as_bytes(),
                 unindexed_data: event.unindexed_data,
                 topics: event.topics,
