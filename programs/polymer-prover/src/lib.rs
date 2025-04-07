@@ -1,21 +1,89 @@
 use anchor_lang::prelude::*;
+use borsh::BorshDeserialize;
 
-pub mod error;
 pub mod instructions;
-pub mod state;
 
 use instructions::*;
-use state::*;
 
-declare_id!("B9cX6RY34xmsvSYwNfrzvtbuQTfoUw7ah6qAgawgwYEL");
+const DISCRIMINATOR_SIZE: usize = 8;
+
+declare_id!("8zQzyWLSgLFpm2Si6HASkYidyL2paQaLZGADAQ5mSyPz");
+
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = DISCRIMINATOR_SIZE + InternalAccount::INIT_SPACE,
+        seeds = [b"internal"],
+        bump,
+    )]
+    pub internal: Account<'info, InternalAccount>,
+
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct InternalAccount {
+    /// store the owner's public key
+    pub authority: Pubkey,
+
+    /// Client type used on peptide to generate the proof. It is part of the proof key
+    #[max_len(32)]
+    pub client_type: String,
+
+    /// Known signer address that signed the peptide state root
+    pub signer_addr: [u8; 20],
+
+    // Peptide chain ID included in the proof
+    pub peptide_chain_id: u64,
+}
+
+#[derive(Accounts)]
+pub struct ValidateEvent<'info> {
+    #[account(
+        init_if_needed,
+        seeds = [authority.key().as_ref()],
+        bump,
+        payer = authority,
+        space = DISCRIMINATOR_SIZE + ProofCacheAccount::INIT_SPACE,
+    )]
+    pub cache_account: Account<'info, ProofCacheAccount>,
+    #[account(mut, signer)]
+    // user will be the owner of the pda account
+    pub authority: Signer<'info>,
+    // need this to create the pda account
+    pub system_program: Program<'info, System>,
+
+    #[account(
+        seeds = [b"internal"],
+        bump,
+    )]
+    pub internal: Account<'info, InternalAccount>,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct ProofCacheAccount {
+    #[max_len(1300)]
+    pub cache: Vec<u8>,
+}
+
+// #[derive(Accounts)]
+// pub struct ParseEvent {}
 
 #[program]
 pub mod polymer_prover {
 
+    use instructions::validate_event::ValidateEventResult;
+
     use super::*;
 
-    #[derive(AnchorSerialize, AnchorDeserialize)]
-    pub struct ValidateEventResult {
+    #[event]
+    pub struct ValidateEventEvent {
         pub chain_id: u32,
         pub emitting_contract: [u8; 20],
         pub topics: Vec<u8>,
@@ -28,38 +96,61 @@ pub mod polymer_prover {
         signer_addr: [u8; 20],
         peptide_chain_id: u64,
     ) -> Result<()> {
-        let account = &mut ctx.accounts.event_account;
+        let internal = &mut ctx.accounts.internal;
 
         // TODO validate client type
         // TODO: check account permissions (see ai conversation)
 
-        account.client_type = client_type;
-        account.signer_addr = signer_addr;
-        account.peptide_chain_id = peptide_chain_id;
+        internal.authority = ctx.accounts.authority.key();
+        internal.client_type = client_type;
+        internal.signer_addr = signer_addr;
+        internal.peptide_chain_id = peptide_chain_id;
 
         Ok(())
     }
 
     pub fn validate_event(
         ctx: Context<ValidateEvent>,
-        proof: Vec<u8>,
-    ) -> Result<ValidateEventResult> {
-        let account = &ctx.accounts.event_account;
+        proof_chunk: Vec<u8>,
+        proof_total_size: u32,
+    ) -> Result<()> {
+        // this is set by the owner/deployer during initialize()
+        let internal = &ctx.accounts.internal;
 
-        match validate_event::handler(
-            &account.client_type,
-            &account.signer_addr,
-            account.peptide_chain_id,
-            proof,
-        ) {
-            Ok((chain_id, event)) => Ok(ValidateEventResult {
-                chain_id,
-                emitting_contract: *event.emitting_contract.as_bytes(),
-                unindexed_data: event.unindexed_data,
-                topics: event.topics,
-            }),
-            Err(e) => Err(e.into()),
+        let result = validate_event::handler(
+            &mut ctx.accounts.cache_account.cache,
+            &proof_chunk,
+            proof_total_size,
+            &internal.client_type,
+            &internal.signer_addr,
+            internal.peptide_chain_id,
+        );
+
+        let cleanup = |ctx: Context<ValidateEvent>| ctx.accounts.cache_account.cache.clear();
+
+        msg!("{}", result);
+        match result {
+            ValidateEventResult::InvalidSignature(..)
+            | ValidateEventResult::InvalidMembershipProof
+            | ValidateEventResult::RecoveredInvalidSignerAddress(..)
+            | ValidateEventResult::InvalidProofChunk(..)
+            | ValidateEventResult::InvalidCacheSize(..) => cleanup(ctx),
+
+            ValidateEventResult::ProofCacheNotYetFull(..) => {
+                // nothing here
+            }
+
+            ValidateEventResult::Valid(chain_id, event) => {
+                cleanup(ctx);
+                emit!(ValidateEventEvent {
+                    chain_id,
+                    topics: event.topics,
+                    emitting_contract: *event.emitting_contract.as_bytes(),
+                    unindexed_data: event.unindexed_data,
+                })
+            }
         }
+        Ok(())
     }
 
     // pub fn parse_event(_ctx: Context<ParseEvent>, event: Vec<u8>, num_topics: usize) -> Result<()> {
@@ -68,26 +159,5 @@ pub mod polymer_prover {
     //     // Ok(parse_event::handler(event.as_slice(), num_topics)?)
     //     Ok(())
     // }
+    //
 }
-
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(
-        init,
-        payer = user,
-        space = EventAccount::MAX_SIZE,
-    )]
-    pub event_account: Account<'info, EventAccount>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct ValidateEvent<'info> {
-    #[account()]
-    pub event_account: Account<'info, EventAccount>,
-}
-
-#[derive(Accounts)]
-pub struct ParseEvent {}

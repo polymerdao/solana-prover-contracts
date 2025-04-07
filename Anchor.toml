@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-polymer_prover = "B9cX6RY34xmsvSYwNfrzvtbuQTfoUw7ah6qAgawgwYEL"
+polymer_prover = "8zQzyWLSgLFpm2Si6HASkYidyL2paQaLZGADAQ5mSyPz"
 
 [registry]
 url = "https://api.apr.dev"
