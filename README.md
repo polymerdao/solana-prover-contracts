@@ -55,7 +55,7 @@ anchor test
 You can also use this validator node for extra testing (ie `proof-api`) simply by running
 
 ```bash
-solana-test-validator
+solana-test-validator --reset --log
 ```
 
 The node will be reachable at `http://127.0.0.1:8899`. Now you can use that node to deploy your program. To do so,
@@ -104,3 +104,15 @@ Now, you can run the same tests against `devnet`
 ```bash
 anchor test --skip-deploy --provider.cluster devnet
 ```
+
+## go bindings
+
+We can also generate go bindings with
+
+```bash
+make go-bindings
+```
+
+This will create go module under the `./go` directory. Under the hood, we use a modified version of
+[solana-anchor-go](https://github.com/fragmetric-labs/solana-anchor-go), which can be found here:
+[https://github.com/polymerdao/solana-anchor-go]()

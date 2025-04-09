@@ -22,10 +22,6 @@ type ValidateEventEventEventData struct {
 
 var ValidateEventEventEventDataDiscriminator = [8]byte{151, 56, 249, 79, 129, 207, 45, 106}
 
-func (obj *ValidateEventEventEventData) Self() any {
-	return obj
-}
-
 func (obj ValidateEventEventEventData) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Write account discriminator:
 	err = encoder.WriteBytes(ValidateEventEventEventDataDiscriminator[:], false)
@@ -93,11 +89,17 @@ func (obj *ValidateEventEventEventData) UnmarshalWithDecoder(decoder *ag_binary.
 }
 
 func (*ValidateEventEventEventData) isEventData() {}
+func (obj *ValidateEventEventEventData) Self() any {
+	return obj
+}
 
 var eventTypes = map[[8]byte]reflect.Type{ValidateEventEventEventDataDiscriminator: reflect.TypeOf(ValidateEventEventEventData{})}
 var eventNames = map[[8]byte]string{ValidateEventEventEventDataDiscriminator: "ValidateEventEvent"}
 var (
 	_ fmt.Formatter = nil
+)
+var (
+	_ *ag_solanago.Transaction = nil
 )
 var (
 	_ *strings.Builder = nil
@@ -107,9 +109,6 @@ var (
 )
 var (
 	_ *ag_binary.Decoder = nil
-)
-var (
-	_ *ag_solanago.Transaction = nil
 )
 var (
 	_ *ag_rpc.GetTransactionResult = nil
