@@ -17,8 +17,8 @@ jobs:
     steps:
       - name: Configure Git credentials
         run: |
-            git config --global credential.helper 'cache --timeout=3600'
-            git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global credential.helper 'cache --timeout=3600'
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,14 +31,27 @@ jobs:
           go-version-file: 'go/go.mod'
           cache: true
 
-      - name: Set up rust
-        uses: actions-rs/toolchain@v1
+      - name: Extract versions
+        uses: solana-developers/github-actions/extract-versions@v0.2.5
+        id: versions
+
+      - name: Set up Solana
+        uses: solana-developers/github-actions/setup-all@v0.2.5
         with:
-          profile: minimal
-          toolchain: stable
+          solana_version: ${{ steps.versions.outputs.solana_version }}
+          anchor_version: ${{ steps.versions.outputs.anchor_version }}
+          node_version: 23
 
-      # - name: Build
-      #   run: make build
-
-      - name: Test
+      - name: Run unit tests
         run: make test
+
+      - name: Run integration tests
+        uses: solana-developers/github-actions/run-tests@v0.2.5
+        with:
+          solana_version: ${{ steps.versions.outputs.solana_version }}
+          anchor_version: ${{ steps.versions.outputs.anchor_version }}
+          program: ${{ inputs.program }}
+
+      - name: Generate Go bindings
+        run: |
+          make install-solana-anchor-go go-bindings
