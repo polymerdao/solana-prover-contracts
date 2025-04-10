@@ -30,6 +30,8 @@ func init() {
 var (
 	Instruction_Initialize = ag_binary.TypeID([8]byte{175, 175, 109, 31, 13, 152, 155, 237})
 
+	Instruction_LoadProof = ag_binary.TypeID([8]byte{34, 145, 85, 9, 72, 98, 17, 92})
+
 	Instruction_ValidateEvent = ag_binary.TypeID([8]byte{66, 249, 207, 221, 30, 87, 27, 129})
 )
 
@@ -38,6 +40,8 @@ func InstructionIDToName(id ag_binary.TypeID) string {
 	switch id {
 	case Instruction_Initialize:
 		return "Initialize"
+	case Instruction_LoadProof:
+		return "LoadProof"
 	case Instruction_ValidateEvent:
 		return "ValidateEvent"
 	default:
@@ -62,6 +66,9 @@ var InstructionImplDef = ag_binary.NewVariantDefinition(
 	[]ag_binary.VariantType{
 		{
 			Name: "initialize", Type: (*Initialize)(nil),
+		},
+		{
+			Name: "load_proof", Type: (*LoadProof)(nil),
 		},
 		{
 			Name: "validate_event", Type: (*ValidateEvent)(nil),
