@@ -14,7 +14,7 @@ import {
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 
-describe("initialize", () => {
+describe("localnet", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.polymer_prover as Program<PolymerProver>;
@@ -24,26 +24,28 @@ describe("initialize", () => {
   const testDataPath = 'programs/polymer-prover/src/instructions/test-data';
   const proof = readProofFile('op-proof-small.hex')
 
+  const clientType = "proof_api";
+  const signerAddress = Array.from(Buffer.from('8D3921B96A3815F403Fb3a4c7fF525969d16f9E0', 'hex'));
+  const peptideChainId = new anchor.BN(901);
+
   before(async () => {
     console.log(`PROGRAM ID: ${program.programId}`)
     console.log(`WALLET:     ${wallet.publicKey.toBase58()}`)
-  })
-
-  it("initialize", async () => {
-    const clientType = "proof_api";
-    const signerAddress = Array.from(Buffer.from('8D3921B96A3815F403Fb3a4c7fF525969d16f9E0', 'hex'));
-    const peptideChainId = new anchor.BN(901);
 
     const signature = await program.methods.initialize(clientType, signerAddress, peptideChainId)
       .accounts({ authority: wallet.publicKey })
       .signers([wallet.payer])
       .rpc(confirmOptions);
 
-    await provider.connection.getTransaction(signature, {
+    const tx = await provider.connection.getTransaction(signature, {
       maxSupportedTransactionVersion: 0,
       commitment: "confirmed",
     });
 
+    console.log(tx.meta.logMessages)
+  })
+
+  it("internal accounts are set after init", async () => {
     const [pda, _bump] = PublicKey.findProgramAddressSync([Buffer.from("internal")], program.programId);
     const account = await program.account.internalAccount.fetch(pda);
     assert.equal(account.clientType, clientType)
@@ -119,6 +121,8 @@ describe("initialize", () => {
     // once the validation runs, the cache must be empty
     const cache2 = await program.account.proofCacheAccount.fetch(cachePda, "confirmed")
     assert.equal(0, cache2.cache.length)
+
+    txs.forEach((t) => console.log(t.meta.logMessages))
 
     checkValidatEventResult(84_532, 'op-event-small.json', ...txs)
   });
@@ -209,6 +213,8 @@ describe("initialize", () => {
       assert.equal(0, caches[0].cache.length)
       assert.equal(0, caches[1].cache.length)
     }
+
+    txs.forEach((t) => console.log(t.meta.logMessages))
 
     checkValidatEventResult(84_532, 'op-event-small.json', txs.at(-2))
     checkValidatEventResult(84_532, 'op-event-small.json', txs.at(-1))
