@@ -68,7 +68,7 @@ pub struct ValidateEvent<'info> {
 #[account]
 #[derive(InitSpace)]
 pub struct ProofCacheAccount {
-    #[max_len(1300)]
+    #[max_len(3000)]
     pub cache: Vec<u8>,
 }
 

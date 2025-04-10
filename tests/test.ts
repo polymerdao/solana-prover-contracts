@@ -267,12 +267,51 @@ describe("initialize", () => {
       commitment: "confirmed",
     });
 
+    txs.forEach((t) => console.log(t.meta.logMessages))
     checkValidatEventResult(84_532, 'op-event-small.json', ...txs)
   });
 
 
-  it.skip("errors out if cache account limit is reached ", async () => {
-    //     Error: AnchorError caused by account: cache_account. Error Code: AccountDidNotSerialize. Error Number: 3004. Error Message: Failed to serialize the account.
+  it("errors out if cache account limit is reached ", async () => {
+    const newSigner = await generateAndFundNewSigner()
+
+    // the proof cache account is currently capped to 3000 bytes. So these txs should sucdeed. The data
+    // we are sending does not mater
+    for (let i = 0; i < 5; i++) {
+      const sig = await program.methods
+        .loadProof(proof.subarray(0, 600))
+        .accounts({ authority: newSigner.publicKey })
+        .signers([newSigner])
+        .rpc(confirmOptions)
+
+      const tx = await provider.connection.getTransaction(sig, {
+        maxSupportedTransactionVersion: 0,
+        commitment: "confirmed",
+      });
+
+      console.log(tx.meta.logMessages)
+    }
+
+    try {
+      // now that the cache account is full, sending one more byte will trigger an error
+      const sig = await program.methods
+        .loadProof(proof.subarray(0, 1))
+        .accounts({ authority: newSigner.publicKey })
+        .signers([newSigner])
+        .rpc(confirmOptions)
+
+      const tx = await provider.connection.getTransaction(sig, {
+        maxSupportedTransactionVersion: 0,
+        commitment: "confirmed",
+      });
+      console.log(tx);
+      throw new Error("loadProof should have failed");
+    }
+    catch (err: any) {
+      assert.ok(err instanceof anchor.AnchorError)
+      assert.ok(err.logs !== undefined)
+      assert.ok(err.logs.find((log: string) => log.includes('AnchorError caused by account: cache_account')))
+    }
   })
 
   function checkValidatEventResult(chainId: number, eventFileName: string, ...txs: VersionedTransactionResponse[]) {
