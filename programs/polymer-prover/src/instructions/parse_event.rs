@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct EthAddress([u8; 20]);
 
 impl EthAddress {
@@ -25,7 +25,7 @@ impl EthAddress {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct EthEvent {
     pub emitting_contract: EthAddress,
     pub topics: Vec<u8>,

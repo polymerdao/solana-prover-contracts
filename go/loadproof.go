@@ -10,8 +10,9 @@ import (
 	ag_treeout "github.com/gagliardetto/treeout"
 )
 
-// ValidateEvent is the `validate_event` instruction.
-type ValidateEvent struct {
+// LoadProof is the `load_proof` instruction.
+type LoadProof struct {
+	ProofChunk *[]byte
 
 	// [0] = [WRITE] cache_account
 	//
@@ -23,22 +24,28 @@ type ValidateEvent struct {
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
-// NewValidateEventInstructionBuilder creates a new `ValidateEvent` instruction builder.
-func NewValidateEventInstructionBuilder() *ValidateEvent {
-	nd := &ValidateEvent{
+// NewLoadProofInstructionBuilder creates a new `LoadProof` instruction builder.
+func NewLoadProofInstructionBuilder() *LoadProof {
+	nd := &LoadProof{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
 	}
 	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
 	return nd
 }
 
+// SetProofChunk sets the "proof_chunk" parameter.
+func (inst *LoadProof) SetProofChunk(proof_chunk []byte) *LoadProof {
+	inst.ProofChunk = &proof_chunk
+	return inst
+}
+
 // SetCacheAccount sets the "cache_account" account.
-func (inst *ValidateEvent) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *ValidateEvent {
+func (inst *LoadProof) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *LoadProof {
 	inst.AccountMetaSlice[0] = ag_solanago.Meta(cacheAccount).WRITE()
 	return inst
 }
 
-func (inst *ValidateEvent) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *LoadProof) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// path: authority
 	seeds = append(seeds, authority.Bytes())
@@ -53,12 +60,12 @@ func (inst *ValidateEvent) findFindCacheAddress(authority ag_solanago.PublicKey,
 }
 
 // FindCacheAddressWithBumpSeed calculates CacheAccount account address with given seeds and a known bump seed.
-func (inst *ValidateEvent) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+func (inst *LoadProof) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
 	pda, _, err = inst.findFindCacheAddress(authority, bumpSeed)
 	return
 }
 
-func (inst *ValidateEvent) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
+func (inst *LoadProof) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, bumpSeed)
 	if err != nil {
 		panic(err)
@@ -67,12 +74,12 @@ func (inst *ValidateEvent) MustFindCacheAddressWithBumpSeed(authority ag_solanag
 }
 
 // FindCacheAddress finds CacheAccount account address with given seeds.
-func (inst *ValidateEvent) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *LoadProof) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	pda, bumpSeed, err = inst.findFindCacheAddress(authority, 0)
 	return
 }
 
-func (inst *ValidateEvent) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
+func (inst *LoadProof) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, 0)
 	if err != nil {
 		panic(err)
@@ -81,39 +88,39 @@ func (inst *ValidateEvent) MustFindCacheAddress(authority ag_solanago.PublicKey)
 }
 
 // GetCacheAccount gets the "cache_account" account.
-func (inst *ValidateEvent) GetCacheAccount() *ag_solanago.AccountMeta {
+func (inst *LoadProof) GetCacheAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
 }
 
 // SetAuthorityAccount sets the "authority" account.
-func (inst *ValidateEvent) SetAuthorityAccount(authority ag_solanago.PublicKey) *ValidateEvent {
+func (inst *LoadProof) SetAuthorityAccount(authority ag_solanago.PublicKey) *LoadProof {
 	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
 	return inst
 }
 
 // GetAuthorityAccount gets the "authority" account.
-func (inst *ValidateEvent) GetAuthorityAccount() *ag_solanago.AccountMeta {
+func (inst *LoadProof) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
 // SetSystemProgramAccount sets the "system_program" account.
-func (inst *ValidateEvent) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *ValidateEvent {
+func (inst *LoadProof) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *LoadProof {
 	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
 	return inst
 }
 
 // GetSystemProgramAccount gets the "system_program" account.
-func (inst *ValidateEvent) GetSystemProgramAccount() *ag_solanago.AccountMeta {
+func (inst *LoadProof) GetSystemProgramAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(2)
 }
 
 // SetInternalAccount sets the "internal" account.
-func (inst *ValidateEvent) SetInternalAccount(internal ag_solanago.PublicKey) *ValidateEvent {
+func (inst *LoadProof) SetInternalAccount(internal ag_solanago.PublicKey) *LoadProof {
 	inst.AccountMetaSlice[3] = ag_solanago.Meta(internal)
 	return inst
 }
 
-func (inst *ValidateEvent) findFindInternalAddress(knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *LoadProof) findFindInternalAddress(knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// const: internal
 	seeds = append(seeds, []byte{byte(0x69), byte(0x6e), byte(0x74), byte(0x65), byte(0x72), byte(0x6e), byte(0x61), byte(0x6c)})
@@ -128,12 +135,12 @@ func (inst *ValidateEvent) findFindInternalAddress(knownBumpSeed uint8) (pda ag_
 }
 
 // FindInternalAddressWithBumpSeed calculates Internal account address with given seeds and a known bump seed.
-func (inst *ValidateEvent) FindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+func (inst *LoadProof) FindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
 	pda, _, err = inst.findFindInternalAddress(bumpSeed)
 	return
 }
 
-func (inst *ValidateEvent) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey) {
+func (inst *LoadProof) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindInternalAddress(bumpSeed)
 	if err != nil {
 		panic(err)
@@ -142,12 +149,12 @@ func (inst *ValidateEvent) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (
 }
 
 // FindInternalAddress finds Internal account address with given seeds.
-func (inst *ValidateEvent) FindInternalAddress() (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *LoadProof) FindInternalAddress() (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	pda, bumpSeed, err = inst.findFindInternalAddress(0)
 	return
 }
 
-func (inst *ValidateEvent) MustFindInternalAddress() (pda ag_solanago.PublicKey) {
+func (inst *LoadProof) MustFindInternalAddress() (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindInternalAddress(0)
 	if err != nil {
 		panic(err)
@@ -156,28 +163,35 @@ func (inst *ValidateEvent) MustFindInternalAddress() (pda ag_solanago.PublicKey)
 }
 
 // GetInternalAccount gets the "internal" account.
-func (inst *ValidateEvent) GetInternalAccount() *ag_solanago.AccountMeta {
+func (inst *LoadProof) GetInternalAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(3)
 }
 
-func (inst ValidateEvent) Build() *Instruction {
+func (inst LoadProof) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
-		TypeID: Instruction_ValidateEvent,
+		TypeID: Instruction_LoadProof,
 	}}
 }
 
 // ValidateAndBuild validates the instruction parameters and accounts;
 // if there is a validation error, it returns the error.
 // Otherwise, it builds and returns the instruction.
-func (inst ValidateEvent) ValidateAndBuild() (*Instruction, error) {
+func (inst LoadProof) ValidateAndBuild() (*Instruction, error) {
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}
 	return inst.Build(), nil
 }
 
-func (inst *ValidateEvent) Validate() error {
+func (inst *LoadProof) Validate() error {
+	// Check whether all (required) parameters are set:
+	{
+		if inst.ProofChunk == nil {
+			return errors.New("ProofChunk parameter is not set")
+		}
+	}
+
 	// Check whether all (required) accounts are set:
 	{
 		if inst.AccountMetaSlice[0] == nil {
@@ -196,16 +210,18 @@ func (inst *ValidateEvent) Validate() error {
 	return nil
 }
 
-func (inst *ValidateEvent) EncodeToTree(parent ag_treeout.Branches) {
+func (inst *LoadProof) EncodeToTree(parent ag_treeout.Branches) {
 	parent.Child(ag_format.Program(ProgramName, ProgramID)).
 		//
 		ParentFunc(func(programBranch ag_treeout.Branches) {
-			programBranch.Child(ag_format.Instruction("ValidateEvent")).
+			programBranch.Child(ag_format.Instruction("LoadProof")).
 				//
 				ParentFunc(func(instructionBranch ag_treeout.Branches) {
 
 					// Parameters of the instruction:
-					instructionBranch.Child("Params[len=0]").ParentFunc(func(paramsBranch ag_treeout.Branches) {})
+					instructionBranch.Child("Params[len=1]").ParentFunc(func(paramsBranch ag_treeout.Branches) {
+						paramsBranch.Child(ag_format.Param(" ProofChunk", *inst.ProofChunk))
+					})
 
 					// Accounts of the instruction:
 					instructionBranch.Child("Accounts[len=4]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
@@ -218,21 +234,34 @@ func (inst *ValidateEvent) EncodeToTree(parent ag_treeout.Branches) {
 		})
 }
 
-func (obj ValidateEvent) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj LoadProof) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `ProofChunk` param:
+	err = encoder.Encode(obj.ProofChunk)
+	if err != nil {
+		return err
+	}
 	return nil
 }
-func (obj *ValidateEvent) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *LoadProof) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `ProofChunk`:
+	err = decoder.Decode(&obj.ProofChunk)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-// NewValidateEventInstruction declares a new ValidateEvent instruction with the provided parameters and accounts.
-func NewValidateEventInstruction(
+// NewLoadProofInstruction declares a new LoadProof instruction with the provided parameters and accounts.
+func NewLoadProofInstruction(
+	// Parameters:
+	proof_chunk []byte,
 	// Accounts:
 	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
 	systemProgram ag_solanago.PublicKey,
-	internal ag_solanago.PublicKey) *ValidateEvent {
-	return NewValidateEventInstructionBuilder().
+	internal ag_solanago.PublicKey) *LoadProof {
+	return NewLoadProofInstructionBuilder().
+		SetProofChunk(proof_chunk).
 		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).
 		SetSystemProgramAccount(systemProgram).

@@ -52,7 +52,7 @@ describe("initialize", () => {
   });
 
   // see https://solana.com/developers/courses/program-security/reinitialization-attacks#summary
-  it("fails to re-initialize  with different authority", async () => {
+  it("fails to re-initialize with different authority", async () => {
     const newOwner = await generateAndFundNewSigner()
 
     try {
@@ -83,7 +83,7 @@ describe("initialize", () => {
     const newSigner = wallet.payer // await generateAndFundNewSigner()
 
     await program.methods
-      .validateEvent(proof.subarray(0, 800), proof.length)
+      .loadProof(proof.subarray(0, 800))
       .accounts({ authority: newSigner.publicKey })
       .signers([newSigner])
       .rpc(confirmOptions);
@@ -93,21 +93,32 @@ describe("initialize", () => {
     const cache0 = await program.account.proofCacheAccount.fetch(cachePda, "confirmed")
     assert.deepEqual(proof.subarray(0, 800), cache0.cache)
 
+    await program.methods
+      .loadProof(proof.subarray(800))
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions);
+
+    // cache must be full at this point
+    const cache1 = await program.account.proofCacheAccount.fetch(cachePda, "confirmed")
+    assert.deepEqual(proof, cache1.cache)
+
+    // now run the actual validation
     const signature = await program.methods
-      .validateEvent(proof.subarray(800), proof.length)
+      .validateEvent()
       .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
       .accounts({ authority: newSigner.publicKey })
       .signers([newSigner])
       .rpc(confirmOptions);
 
-    // now that we have sent the second chunk which completes the proof, the cache must be empty
-    const cache1 = await program.account.proofCacheAccount.fetch(cachePda, "confirmed")
-    assert.equal(0, cache1.cache.length)
-
     const txs = await provider.connection.getTransactions([signature], {
       maxSupportedTransactionVersion: 0,
       commitment: "confirmed",
     });
+
+    // once the validation runs, the cache must be empty
+    const cache2 = await program.account.proofCacheAccount.fetch(cachePda, "confirmed")
+    assert.equal(0, cache2.cache.length)
 
     checkValidatEventResult(84_532, 'op-event-small.json', ...txs)
   });
@@ -121,12 +132,12 @@ describe("initialize", () => {
 
     await Promise.all([
       program.methods
-        .validateEvent(proof.subarray(0, 800), proof.length)
+        .loadProof(proof.subarray(0, 800))
         .accounts({ authority: user0.publicKey })
         .signers([user0])
         .rpc(confirmOptions),
       program.methods
-        .validateEvent(proof.subarray(0, 700), proof.length)
+        .loadProof(proof.subarray(0, 700))
         .accounts({ authority: user1.publicKey })
         .signers([user1])
         .rpc(confirmOptions)
@@ -146,22 +157,50 @@ describe("initialize", () => {
     }
 
     // send the second chunks now
+    await Promise.all([
+      program.methods
+        .loadProof(proof.subarray(800))
+        .accounts({ authority: user0.publicKey })
+        .signers([user0])
+        .rpc(confirmOptions),
+      program.methods
+        .loadProof(proof.subarray(700))
+        .accounts({ authority: user1.publicKey })
+        .signers([user1])
+        .rpc(confirmOptions)
+    ])
+
+    // now that we have sent all the chunks, both caches must be full
+    {
+      const caches = await Promise.all([
+        program.account.proofCacheAccount.fetch(cachePda0, "confirmed"),
+        program.account.proofCacheAccount.fetch(cachePda1, "confirmed"),
+      ])
+      assert.deepEqual(proof, caches[0].cache)
+      assert.deepEqual(proof, caches[1].cache)
+    }
+
+    // run the validations now
     const signatures: string[] = await Promise.all([
       program.methods
-        .validateEvent(proof.subarray(800), proof.length)
+        .validateEvent()
         .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
         .accounts({ authority: user0.publicKey })
         .signers([user0])
         .rpc(confirmOptions),
       program.methods
-        .validateEvent(proof.subarray(700), proof.length)
+        .validateEvent()
         .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
         .accounts({ authority: user1.publicKey })
         .signers([user1])
         .rpc(confirmOptions)
     ])
 
-    // now that we have sent all the chunks, both caches must be empty
+    const txs = await provider.connection.getTransactions(signatures, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+
     {
       const caches = await Promise.all([
         program.account.proofCacheAccount.fetch(cachePda0, "confirmed"),
@@ -171,59 +210,54 @@ describe("initialize", () => {
       assert.equal(0, caches[1].cache.length)
     }
 
-    const txs = await provider.connection.getTransactions(signatures, {
-      maxSupportedTransactionVersion: 0,
-      commitment: "confirmed",
-    });
-
     checkValidatEventResult(84_532, 'op-event-small.json', txs.at(-2))
     checkValidatEventResult(84_532, 'op-event-small.json', txs.at(-1))
   });
 
-  // calls validate event with invalid input, causing the PDA account to be closed and then calls it again with
+  // calls validate event with invalid input, causing the cache to be cleared and then calls it again with
   // valid input to verify the program could recover
   it("recovers from an error", async () => {
     const newSigner = await generateAndFundNewSigner()
 
-    // this will cause the PDA account to be closed since the second chunk wille make the cache
-    // going beyond the total proof size
-    const sigs0: string[] = await Promise.all([
-      program.methods
-        .validateEvent(proof.subarray(0, 700), proof.length)
-        .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
-        .accounts({ authority: newSigner.publicKey })
-        .signers([newSigner])
-        .rpc(confirmOptions),
-      program.methods
-        .validateEvent(proof.subarray(0, 701), proof.length)
-        .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
-        .accounts({ authority: newSigner.publicKey })
-        .signers([newSigner])
-        .rpc(confirmOptions)
-    ])
+    await program.methods
+      .loadProof(proof.subarray(0, 700))
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
 
-    const txs0 = await provider.connection.getTransactions(sigs0, {
+    const sig0 = await program.methods
+      .validateEvent()
+      .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    const txs0 = await provider.connection.getTransactions([sig0], {
       maxSupportedTransactionVersion: 0,
       commitment: "confirmed",
     });
 
-    // since we are sending two txs concurrently, we don't really know which one will be procesed first. We do know
-    // that the second one will cause this error log to be returned.
+    // since we are sending two an incomplete proof, we expect the event validation to fail like so
     assert.ok(txs0.find((tx: VersionedTransactionResponse) => tx.meta.logMessages.find((log: string) =>
-      log.endsWith(`invalid proof cache len 1401 > ${proof.length}`)
+      log.endsWith("invalid membership proof: can't read path")
     )))
 
-    // at this point the PDA cache account should be closed, so calling valide event again with valid inputs should
+    // at this point the PDA cache account should be clear, so calling valide event again with valid inputs should
     // works as expected
-
     await program.methods
-      .validateEvent(proof.subarray(0, 800), proof.length)
+      .loadProof(proof.subarray(0, 700))
       .accounts({ authority: newSigner.publicKey })
       .signers([newSigner])
-      .rpc(confirmOptions);
+      .rpc(confirmOptions)
+
+    await program.methods
+      .loadProof(proof.subarray(700))
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
 
     const signature1 = await program.methods
-      .validateEvent(proof.subarray(800), proof.length)
+      .validateEvent()
       .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
       .accounts({ authority: newSigner.publicKey })
       .signers([newSigner])

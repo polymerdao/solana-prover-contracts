@@ -109,47 +109,35 @@ pub mod polymer_prover {
         Ok(())
     }
 
-    pub fn validate_event(
-        ctx: Context<ValidateEvent>,
-        proof_chunk: Vec<u8>,
-        proof_total_size: u32,
-    ) -> Result<()> {
+    pub fn load_proof(ctx: Context<ValidateEvent>, proof_chunk: Vec<u8>) -> Result<()> {
+        ctx.accounts.cache_account.cache.extend(proof_chunk.iter());
+        Ok(())
+    }
+
+    pub fn validate_event(ctx: Context<ValidateEvent>) -> Result<()> {
         // this is set by the owner/deployer during initialize()
         let internal = &ctx.accounts.internal;
 
         let result = validate_event::handler(
-            &mut ctx.accounts.cache_account.cache,
-            &proof_chunk,
-            proof_total_size,
+            &ctx.accounts.cache_account.cache,
             &internal.client_type,
             &internal.signer_addr,
             internal.peptide_chain_id,
         );
 
-        let cleanup = |ctx: Context<ValidateEvent>| ctx.accounts.cache_account.cache.clear();
-
         msg!("{}", result);
-        match result {
-            ValidateEventResult::InvalidSignature(..)
-            | ValidateEventResult::InvalidMembershipProof
-            | ValidateEventResult::RecoveredInvalidSignerAddress(..)
-            | ValidateEventResult::InvalidProofChunk(..)
-            | ValidateEventResult::InvalidCacheSize(..) => cleanup(ctx),
-
-            ValidateEventResult::ProofCacheNotYetFull(..) => {
-                // nothing here
-            }
-
-            ValidateEventResult::Valid(chain_id, event) => {
-                cleanup(ctx);
-                emit!(ValidateEventEvent {
-                    chain_id,
-                    topics: event.topics,
-                    emitting_contract: *event.emitting_contract.as_bytes(),
-                    unindexed_data: event.unindexed_data,
-                })
-            }
+        if let ValidateEventResult::Valid(chain_id, event) = result {
+            emit!(ValidateEventEvent {
+                chain_id,
+                topics: event.topics,
+                emitting_contract: *event.emitting_contract.as_bytes(),
+                unindexed_data: event.unindexed_data,
+            })
         }
+
+        //        trace!("clearing cache!");
+        ctx.accounts.cache_account.cache.clear();
+
         Ok(())
     }
 

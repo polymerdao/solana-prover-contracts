@@ -10,15 +10,13 @@ use super::parse_event::EthEvent;
 pub enum ValidateEventResult {
     InvalidSignature(String),
 
-    InvalidMembershipProof,
+    InvalidProof(usize, usize),
+
+    InvalidMembershipProof(String),
+
+    InvalidStateRoot(Vec<u8>),
 
     RecoveredInvalidSignerAddress(EthAddress),
-
-    InvalidProofChunk(usize, usize),
-
-    ProofCacheNotYetFull(usize, usize),
-
-    InvalidCacheSize(usize, usize),
 
     Valid(u32, EthEvent),
 }
@@ -26,11 +24,24 @@ pub enum ValidateEventResult {
 impl fmt::Display for ValidateEventResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ValidateEventResult::InvalidProof(got, needed) => {
+                write!(
+                    f,
+                    "invalid proof: got {} bytes, at least {} are needed",
+                    got, needed
+                )
+            }
+
             ValidateEventResult::InvalidSignature(err_msg) => {
                 write!(f, "invalid signature: {}", err_msg)
             }
-            ValidateEventResult::InvalidMembershipProof => {
-                write!(f, "invalid membership proof")
+
+            ValidateEventResult::InvalidStateRoot(state_root) => {
+                write!(f, "invalid state root: 0x{}", hex::encode(state_root))
+            }
+
+            ValidateEventResult::InvalidMembershipProof(err_msg) => {
+                write!(f, "invalid membership proof: {}", err_msg)
             }
 
             ValidateEventResult::RecoveredInvalidSignerAddress(recovered) => {
@@ -40,19 +51,7 @@ impl fmt::Display for ValidateEventResult {
                     recovered.to_hex()
                 )
             }
-            ValidateEventResult::InvalidProofChunk(chunk_len, total) => {
-                write!(f, "invalid proof chunk len {} > {}", chunk_len, total)
-            }
-            ValidateEventResult::InvalidCacheSize(cache_len, total) => {
-                write!(f, "invalid proof cache len {} > {}", cache_len, total)
-            }
-            ValidateEventResult::ProofCacheNotYetFull(cache_len, total) => {
-                write!(
-                    f,
-                    "proof chunk has been cached. cache size: {}, total size: {}",
-                    cache_len, total
-                )
-            }
+
             ValidateEventResult::Valid(..) => {
                 write!(f, "proof is valid")
             }
@@ -61,46 +60,26 @@ impl fmt::Display for ValidateEventResult {
 }
 
 pub fn handler(
-    proof_cache: &mut Vec<u8>,
-    proof_chunk: &Vec<u8>,
-    proof_total_size: u32,
+    proof: &Vec<u8>,
     client_type: &String,
     signer_addr: &[u8; 20],
     peptide_chain_id: u64,
 ) -> ValidateEventResult {
-    if proof_chunk.len() > proof_total_size as usize {
-        return ValidateEventResult::InvalidProofChunk(
-            proof_chunk.len(),
-            proof_total_size as usize,
-        );
+    // first, check there's enough data to read the event_end index
+    let proof_len = proof.len();
+    if proof_len < 123 {
+        return ValidateEventResult::InvalidProof(proof_len, 123);
     }
 
-    proof_cache.extend(proof_chunk.iter());
-    if proof_cache.len() < proof_total_size as usize {
-        return ValidateEventResult::ProofCacheNotYetFull(
-            proof_cache.len(),
-            proof_total_size as usize,
-        );
+    let event_end: usize =
+        u16::from_be_bytes(<[u8; 2]>::try_from(&proof[121..123]).unwrap()).into();
+
+    // now, make sure we have enough data to read until the event ends. After it, we have the
+    // membership proof, which will be checked later
+    if proof_len < event_end {
+        return ValidateEventResult::InvalidProof(proof_len, event_end);
     }
 
-    if proof_cache.len() > proof_total_size as usize {
-        return ValidateEventResult::InvalidCacheSize(proof_cache.len(), proof_total_size as usize);
-    }
-
-    validate_event(
-        client_type,
-        signer_addr,
-        peptide_chain_id,
-        proof_cache.to_vec(),
-    )
-}
-
-fn validate_event(
-    client_type: &String,
-    signer_addr: &[u8; 20],
-    peptide_chain_id: u64,
-    proof: Vec<u8>,
-) -> ValidateEventResult {
     let app_hash = &<[u8; 32]>::try_from(&proof[0..32]).unwrap();
 
     let recovered = recover_signature(
@@ -119,9 +98,6 @@ fn validate_event(
         }
     }
 
-    let event_end: usize =
-        u16::from_be_bytes(<[u8; 2]>::try_from(&proof[121..123]).unwrap()).into();
-
     let chain_id = u32::from_be_bytes(<[u8; 4]>::try_from(&proof[97..101]).unwrap());
     let key = format!(
         "chain/{}/storedLogs/{}/{}/{}/{}",
@@ -138,8 +114,8 @@ fn validate_event(
         hasher.result()
     };
 
-    if !verify_membership(app_hash, key.as_bytes(), &value.0, &proof[event_end..]) {
-        return ValidateEventResult::InvalidMembershipProof;
+    if let Some(err) = verify_membership(app_hash, key.as_bytes(), &value.0, &proof[event_end..]) {
+        return err;
     }
 
     let raw_event = &proof[123..event_end];
@@ -182,9 +158,28 @@ fn recover_signature(
     }
 }
 
-fn verify_membership(app_hash: &[u8; 32], key: &[u8], value: &[u8; 32], proof: &[u8]) -> bool {
+fn verify_membership(
+    app_hash: &[u8; 32],
+    key: &[u8],
+    value: &[u8; 32],
+    proof: &[u8],
+) -> Option<ValidateEventResult> {
+    // first make sure we have enough data to read the start of the first path
+    if proof.len() < 2 {
+        return Some(ValidateEventResult::InvalidMembershipProof(
+            "can't read start of first path".to_string(),
+        ));
+    }
+
     let number_of_paths: usize = proof[0].into();
     let path_zero_start: usize = proof[1].into();
+
+    // add 1 here to cover for the first suffix_end read down below
+    if proof.len() < path_zero_start + 1 {
+        return Some(ValidateEventResult::InvalidMembershipProof(
+            "can't read first path".to_string(),
+        ));
+    }
 
     let hashed_value = {
         let mut hasher = Sha256::new();
@@ -206,6 +201,11 @@ fn verify_membership(app_hash: &[u8; 32], key: &[u8], value: &[u8; 32], proof: &
         let suffix_start: usize = proof[offset].into();
         let suffix_end: usize = proof[offset + 1].into();
 
+        if proof.len() < offset + suffix_end {
+            return Some(ValidateEventResult::InvalidMembershipProof(
+                "can't read path".to_string(),
+            ));
+        }
         let mut hasher = Sha256::new();
         hasher.update(&proof[offset + 2..offset + suffix_start]);
         hasher.update(pre_hash);
@@ -214,7 +214,11 @@ fn verify_membership(app_hash: &[u8; 32], key: &[u8], value: &[u8; 32], proof: &
         offset = offset + suffix_end;
     }
 
-    pre_hash.as_slice() == *app_hash
+    if pre_hash.as_slice() != *app_hash {
+        return Some(ValidateEventResult::InvalidStateRoot(pre_hash.to_vec()));
+    }
+
+    return None;
 }
 
 fn u64_to_32_bytes_array(input: u64) -> [u8; 32] {
@@ -239,7 +243,6 @@ mod tests {
     }
 
     struct TestContext {
-        cache: Vec<u8>,
         proof: Vec<u8>,
         event: Event,
         client_type: String,
@@ -260,7 +263,6 @@ mod tests {
             .expect("could not read event file");
 
         TestContext {
-            cache: Vec::new(),
             proof,
             event,
             client_type: "proof_api".to_string(),
@@ -271,12 +273,10 @@ mod tests {
 
     #[test]
     fn test_validate_proof_in_one_chunk() {
-        let mut t = setup();
+        let t = setup();
 
         let result = handler(
-            &mut t.cache,
             &t.proof,
-            t.proof.len() as u32,
             &t.client_type,
             t.signer.as_bytes(),
             t.peptide_chain_id,
@@ -286,9 +286,6 @@ mod tests {
     }
 
     fn validate_result(t: TestContext, result: ValidateEventResult) {
-        // the cache must contain the full proof at this point
-        assert_eq!(t.proof, t.cache);
-
         let (chain_id, event) = match result {
             ValidateEventResult::Valid(n, t) => (n, t),
             _ => panic!("expected valid proof"),
@@ -306,75 +303,6 @@ mod tests {
         assert_eq!(
             hex::decode(t.event.data.trim_start_matches("0x")).unwrap(),
             event.unindexed_data
-        );
-    }
-
-    #[test]
-    fn test_validate_proof_in_two_chunks() {
-        let mut t = setup();
-
-        let result0 = handler(
-            &mut t.cache,
-            &t.proof[..800].to_vec(),
-            t.proof.len() as u32,
-            &t.client_type,
-            t.signer.as_bytes(),
-            t.peptide_chain_id,
-        );
-        assert_eq!(
-            ValidateEventResult::ProofCacheNotYetFull(800, t.proof.len()),
-            result0
-        );
-        assert_eq!(800 as usize, t.cache.len());
-
-        let result1 = handler(
-            &mut t.cache,
-            &t.proof[800..].to_vec(),
-            t.proof.len() as u32,
-            &t.client_type,
-            t.signer.as_bytes(),
-            t.peptide_chain_id,
-        );
-        validate_result(t, result1);
-    }
-
-    #[test]
-    fn test_invalid_proof_chunk() {
-        let mut t = setup();
-
-        let result = handler(
-            &mut t.cache,
-            &t.proof,
-            t.proof.len() as u32 - 1,
-            &t.client_type,
-            t.signer.as_bytes(),
-            t.peptide_chain_id,
-        );
-        assert_eq!(
-            ValidateEventResult::InvalidProofChunk(t.proof.len(), t.proof.len() - 1),
-            result
-        );
-    }
-
-    #[test]
-    fn test_invalid_cache_size() {
-        let mut t = setup();
-
-        // prepopulate the cache with some values to make it go over the proof.len() limit
-        let some_bytes = vec![1, 2, 3];
-        t.cache.extend(&some_bytes);
-
-        let result = handler(
-            &mut t.cache,
-            &t.proof,
-            t.proof.len() as u32,
-            &t.client_type,
-            t.signer.as_bytes(),
-            t.peptide_chain_id,
-        );
-        assert_eq!(
-            ValidateEventResult::InvalidCacheSize(t.proof.len() + some_bytes.len(), t.proof.len()),
-            result
         );
     }
 
