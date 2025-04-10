@@ -77,8 +77,17 @@ Now we can run the same integration tests against the local node
 anchor test --skip-local-validator --skip-deploy
 ```
 
-But more importantly, youu can use the local node to validate proofs generated with the `proof-api` by pointing
+But more importantly, you can use the local node to validate proofs generated with the `proof-api` by pointing
 the `e2e tool` to the local solana test validator node: `http://127.0.0.1:8899`.
+
+## A better localnet
+
+Another option is to use `anchor --detach` to start the local node, deploy the program and initialize it. Try it
+with
+
+```bash
+make localnet
+```
 
 ## Solana devnet
 
