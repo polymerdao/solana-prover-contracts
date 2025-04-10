@@ -1,0 +1,44 @@
+name: solana-prover-contracts
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-solana-prover-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure Git credentials
+        run: |
+            git config --global credential.helper 'cache --timeout=3600'
+            git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go/go.mod'
+          cache: true
+
+      - name: Set up rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      # - name: Build
+      #   run: make build
+
+      - name: Test
+        run: make test
