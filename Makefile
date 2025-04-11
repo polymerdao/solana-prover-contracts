@@ -47,3 +47,12 @@ install-solana-anchor-go:
 .PHONY: localnet
 localnet:
 	anchor test "\-\-grep 'internal accounts are set after init'" --detach
+
+
+# this will be the new version. Use with `make upgrade-version VERSION=0.0.1`
+VERSION :=
+
+.PHONY: upgrade-version
+upgrade-version: # integration-tests go-bindings
+	@if [[ "$(VERSION)" == "" ]]; then echo "use: make upgrade-version VERSION=x.x.x"; exit 1; fi
+	@./scripts/upgrade-version.sh $(VERSION)
