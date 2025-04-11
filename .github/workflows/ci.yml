@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-test-solana-prover-contracts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04-16core
     steps:
       - name: Configure Git credentials
         run: |
@@ -25,12 +25,6 @@ jobs:
         with:
           fetch-depth: '0'
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go/go.mod'
-          cache: true
-
       - name: Extract versions
         uses: solana-developers/github-actions/extract-versions@v0.2.5
         id: versions
@@ -40,7 +34,7 @@ jobs:
         with:
           solana_version: ${{ steps.versions.outputs.solana_version }}
           anchor_version: ${{ steps.versions.outputs.anchor_version }}
-          node_version: 23
+          node_version: 18
 
       - name: Run unit tests
         run: make test
@@ -50,7 +44,13 @@ jobs:
         with:
           solana_version: ${{ steps.versions.outputs.solana_version }}
           anchor_version: ${{ steps.versions.outputs.anchor_version }}
-          program: ${{ inputs.program }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+          cache: true
 
       - name: Generate Go bindings
         run: |
