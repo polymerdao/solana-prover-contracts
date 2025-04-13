@@ -28,9 +28,13 @@ func init() {
 }
 
 var (
+	Instruction_ClearProofCache = ag_binary.TypeID([8]byte{201, 199, 110, 50, 133, 117, 40, 35})
+
 	Instruction_Initialize = ag_binary.TypeID([8]byte{175, 175, 109, 31, 13, 152, 155, 237})
 
 	Instruction_LoadProof = ag_binary.TypeID([8]byte{34, 145, 85, 9, 72, 98, 17, 92})
+
+	Instruction_ResizeProofCache = ag_binary.TypeID([8]byte{140, 29, 53, 98, 103, 152, 83, 87})
 
 	Instruction_ValidateEvent = ag_binary.TypeID([8]byte{66, 249, 207, 221, 30, 87, 27, 129})
 )
@@ -38,10 +42,14 @@ var (
 // InstructionIDToName returns the name of the instruction given its ID.
 func InstructionIDToName(id ag_binary.TypeID) string {
 	switch id {
+	case Instruction_ClearProofCache:
+		return "ClearProofCache"
 	case Instruction_Initialize:
 		return "Initialize"
 	case Instruction_LoadProof:
 		return "LoadProof"
+	case Instruction_ResizeProofCache:
+		return "ResizeProofCache"
 	case Instruction_ValidateEvent:
 		return "ValidateEvent"
 	default:
@@ -65,10 +73,16 @@ var InstructionImplDef = ag_binary.NewVariantDefinition(
 	ag_binary.AnchorTypeIDEncoding,
 	[]ag_binary.VariantType{
 		{
+			Name: "clear_proof_cache", Type: (*ClearProofCache)(nil),
+		},
+		{
 			Name: "initialize", Type: (*Initialize)(nil),
 		},
 		{
 			Name: "load_proof", Type: (*LoadProof)(nil),
+		},
+		{
+			Name: "resize_proof_cache", Type: (*ResizeProofCache)(nil),
 		},
 		{
 			Name: "validate_event", Type: (*ValidateEvent)(nil),
