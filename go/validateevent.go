@@ -17,18 +17,15 @@ type ValidateEvent struct {
 	//
 	// [1] = [WRITE, SIGNER] authority
 	//
-	// [2] = [] system_program
-	//
-	// [3] = [] internal
+	// [2] = [] internal
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
 // NewValidateEventInstructionBuilder creates a new `ValidateEvent` instruction builder.
 func NewValidateEventInstructionBuilder() *ValidateEvent {
 	nd := &ValidateEvent{
-		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
+		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
 	}
-	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
 	return nd
 }
 
@@ -96,20 +93,9 @@ func (inst *ValidateEvent) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
-// SetSystemProgramAccount sets the "system_program" account.
-func (inst *ValidateEvent) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *ValidateEvent {
-	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
-	return inst
-}
-
-// GetSystemProgramAccount gets the "system_program" account.
-func (inst *ValidateEvent) GetSystemProgramAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(2)
-}
-
 // SetInternalAccount sets the "internal" account.
 func (inst *ValidateEvent) SetInternalAccount(internal ag_solanago.PublicKey) *ValidateEvent {
-	inst.AccountMetaSlice[3] = ag_solanago.Meta(internal)
+	inst.AccountMetaSlice[2] = ag_solanago.Meta(internal)
 	return inst
 }
 
@@ -157,7 +143,7 @@ func (inst *ValidateEvent) MustFindInternalAddress() (pda ag_solanago.PublicKey)
 
 // GetInternalAccount gets the "internal" account.
 func (inst *ValidateEvent) GetInternalAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(3)
+	return inst.AccountMetaSlice.Get(2)
 }
 
 func (inst ValidateEvent) Build() *Instruction {
@@ -187,9 +173,6 @@ func (inst *ValidateEvent) Validate() error {
 			return errors.New("accounts.Authority is not set")
 		}
 		if inst.AccountMetaSlice[2] == nil {
-			return errors.New("accounts.SystemProgram is not set")
-		}
-		if inst.AccountMetaSlice[3] == nil {
 			return errors.New("accounts.Internal is not set")
 		}
 	}
@@ -208,11 +191,10 @@ func (inst *ValidateEvent) EncodeToTree(parent ag_treeout.Branches) {
 					instructionBranch.Child("Params[len=0]").ParentFunc(func(paramsBranch ag_treeout.Branches) {})
 
 					// Accounts of the instruction:
-					instructionBranch.Child("Accounts[len=4]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("        cache_", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(1)))
-						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(2)))
-						accountsBranch.Child(ag_format.Meta("      internal", inst.AccountMetaSlice.Get(3)))
+					instructionBranch.Child("Accounts[len=3]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
+						accountsBranch.Child(ag_format.Meta("   cache_", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("authority", inst.AccountMetaSlice.Get(1)))
+						accountsBranch.Child(ag_format.Meta(" internal", inst.AccountMetaSlice.Get(2)))
 					})
 				})
 		})
@@ -230,11 +212,9 @@ func NewValidateEventInstruction(
 	// Accounts:
 	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
-	systemProgram ag_solanago.PublicKey,
 	internal ag_solanago.PublicKey) *ValidateEvent {
 	return NewValidateEventInstructionBuilder().
 		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).
-		SetSystemProgramAccount(systemProgram).
 		SetInternalAccount(internal)
 }

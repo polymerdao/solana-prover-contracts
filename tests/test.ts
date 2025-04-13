@@ -278,7 +278,7 @@ describe("localnet", () => {
   });
 
 
-  it("errors out if cache account limit is reached ", async () => {
+  it("errors out if cache account limit is reached", async () => {
     const newSigner = await generateAndFundNewSigner()
 
     // the proof cache account is currently capped to 3000 bytes. So these txs should sucdeed. The data
@@ -318,6 +318,58 @@ describe("localnet", () => {
       assert.ok(err.logs !== undefined)
       assert.ok(err.logs.find((log: string) => log.includes('AnchorError caused by account: cache_account')))
     }
+  })
+
+  it("clears cache", async () => {
+    const newSigner = await generateAndFundNewSigner()
+    const [cacheAccount, _bump] = PublicKey.findProgramAddressSync([newSigner.publicKey.toBuffer()], program.programId);
+
+    // the cache account of the new signer will only be created when loadProof is called
+    try {
+      await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
+      throw new Error('Expected error was not thrown');
+    } catch (err) {
+      assert.ok(err instanceof Error)
+      assert.ok(err.message.includes('Account does not exist or has no data'))
+    }
+
+    await program.methods
+      .loadProof(proof.subarray(0, 600))
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    // confirm that the proof chunk has been loaded
+    const cache1 = await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
+    assert.equal(600, cache1.cache.length)
+
+    await program.methods
+      .clearProofCache()
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    // confirm the cache has been cleared
+    const cache2 = await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
+    assert.equal(0, cache2.cache.length)
+  })
+
+
+  // in order to fully test this we'd have to deploy a program with an initial max size (ie 100B, then change it
+  // something else (ie 200) and redeploy the program
+  it("resizes cache", async () => {
+    const newSigner = await generateAndFundNewSigner()
+    await program.methods
+      .loadProof(proof.subarray(0, 600))
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    await program.methods
+      .resizeProofCache()
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
   })
 
   function checkValidatEventResult(chainId: number, eventFileName: string, ...txs: VersionedTransactionResponse[]) {

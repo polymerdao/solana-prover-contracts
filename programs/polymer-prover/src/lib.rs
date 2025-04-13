@@ -45,18 +45,14 @@ pub struct InternalAccount {
 #[derive(Accounts)]
 pub struct ValidateEvent<'info> {
     #[account(
-        init_if_needed,
+        mut,
         seeds = [authority.key().as_ref()],
         bump,
-        payer = authority,
-        space = DISCRIMINATOR_SIZE + ProofCacheAccount::INIT_SPACE,
     )]
     pub cache_account: Account<'info, ProofCacheAccount>,
     #[account(mut, signer)]
     // user will be the owner of the pda account
     pub authority: Signer<'info>,
-    // need this to create the pda account
-    pub system_program: Program<'info, System>,
 
     #[account(
         seeds = [b"internal"],
@@ -72,6 +68,53 @@ pub struct ProofCacheAccount {
     pub cache: Vec<u8>,
 }
 
+#[derive(Accounts)]
+pub struct LoadProof<'info> {
+    #[account(
+        init_if_needed,
+        seeds = [authority.key().as_ref()],
+        bump,
+        payer = authority,
+        space = DISCRIMINATOR_SIZE + ProofCacheAccount::INIT_SPACE,
+    )]
+    pub cache_account: Account<'info, ProofCacheAccount>,
+    #[account(mut, signer)]
+    // user will be the owner of the pda account
+    pub authority: Signer<'info>,
+    // need this to create the pda account
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ResizeProofCache<'info> {
+    #[account(
+        mut ,
+        realloc = DISCRIMINATOR_SIZE + ProofCacheAccount::INIT_SPACE,
+        realloc::payer = authority,
+        realloc::zero = false,
+        seeds = [authority.key().as_ref()],
+        bump,
+    )]
+    pub cache_account: Account<'info, ProofCacheAccount>,
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+    // need this to mutate the pda account
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ClearProofCache<'info> {
+    #[account(
+        mut ,
+        seeds = [authority.key().as_ref()],
+        bump,
+    )]
+    pub cache_account: Account<'info, ProofCacheAccount>,
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+    // need this to mutate the pda account
+    pub system_program: Program<'info, System>,
+}
 // #[derive(Accounts)]
 // pub struct ParseEvent {}
 
@@ -109,7 +152,18 @@ pub mod polymer_prover {
         Ok(())
     }
 
-    pub fn load_proof(ctx: Context<ValidateEvent>, proof_chunk: Vec<u8>) -> Result<()> {
+    pub fn resize_proof_cache(_ctx: Context<ResizeProofCache>) -> Result<()> {
+        msg!("proof cache successfully resized");
+        Ok(())
+    }
+
+    pub fn clear_proof_cache(ctx: Context<ClearProofCache>) -> Result<()> {
+        msg!("proof cache successfully cleared");
+        ctx.accounts.cache_account.cache.clear();
+        Ok(())
+    }
+
+    pub fn load_proof(ctx: Context<LoadProof>, proof_chunk: Vec<u8>) -> Result<()> {
         ctx.accounts.cache_account.cache.extend(proof_chunk.iter());
         Ok(())
     }
