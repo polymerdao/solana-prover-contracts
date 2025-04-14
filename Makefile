@@ -54,6 +54,5 @@ VERSION :=
 
 .PHONY: upgrade-version
 upgrade-version: # integration-tests go-bindings
-	@if [[ "$(VERSION)" == "" ]]; then echo "use: make upgrade-version VERSION=x.x.x"; exit 1; fi
+	@if [[ "$(VERSION)" == "" ]]; then echo "\n  usage: make upgrade-version VERSION=x.x.x\n"; exit 1; fi
 	@./scripts/upgrade-version.sh $(VERSION)
-	@cargo build
