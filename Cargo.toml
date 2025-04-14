@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "programs/*"
+    "programs/*",
+    "tools/proverctl",
 ]
 resolver = "2"
 

@@ -13,6 +13,8 @@ import {
   PublicKey,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
+import bs58 from 'bs58';
+import { execSync } from 'child_process';
 
 describe("localnet", () => {
   const provider = anchor.AnchorProvider.env();
@@ -372,6 +374,32 @@ describe("localnet", () => {
       .rpc(confirmOptions)
   })
 
+  it("runs proverctl", async () => {
+    const newSigner = await generateAndFundNewSigner()
+
+    const [cacheAccount, _bump] = PublicKey.findProgramAddressSync([newSigner.publicKey.toBuffer()], program.programId);
+
+    await program.methods
+      .loadProof(proof.subarray(0, 600))
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    // confirm that the proof chunk has been loaded
+    const cache1 = await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
+    assert.equal(600, cache1.cache.length)
+
+    const clearCacheOutput = runProverCtl('--keypair', bs58.encode(newSigner.secretKey), 'clear-cache')
+    assert.ok(clearCacheOutput.includes('proof cache successfully cleared'))
+
+    // confirm the cache has been cleared
+    const cache2 = await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
+    assert.equal(0, cache2.cache.length)
+
+    const resizeCacheOuput = runProverCtl('--keypair', bs58.encode(newSigner.secretKey), 'resize-cache')
+    assert.ok(resizeCacheOuput.includes('proof cache successfully resized'))
+  })
+
   function checkValidatEventResult(chainId: number, eventFileName: string, ...txs: VersionedTransactionResponse[]) {
     const result = findEvent('validateEventEvent', txs)
     assert.ok(result)
@@ -404,7 +432,9 @@ describe("localnet", () => {
       signature,
       blockhash: latestBlockhash.blockhash,
       lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-    })
+
+    },
+      'confirmed')
     return signer
   }
 
@@ -417,6 +447,16 @@ describe("localnet", () => {
       }
     }
     throw Error(`event ${name} not found`)
+  }
+
+  function runProverCtl(...args: string[]): string {
+    try {
+      const output = execSync(`cargo run --quiet --bin proverctl -- ${args.join(' ')} 2>&1`)
+      return output.toString()
+    } catch (error) {
+      console.error('Command failed:', error)
+      throw error
+    }
   }
 
   // const MAX_TRANSACTION_SIZE = 1232;
