@@ -56,3 +56,4 @@ VERSION :=
 upgrade-version: # integration-tests go-bindings
 	@if [[ "$(VERSION)" == "" ]]; then echo "use: make upgrade-version VERSION=x.x.x"; exit 1; fi
 	@./scripts/upgrade-version.sh $(VERSION)
+	@cargo build

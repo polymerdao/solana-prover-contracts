@@ -7,6 +7,7 @@ set -euo pipefail
 # use this so the script can be run from anywhere
 ROOT="$( realpath "$( dirname "$( realpath "$0" )" )"/.. )"
 CARGO_FILE="$ROOT/programs/polymer-prover/Cargo.toml"
+CARGO_LOCK="$ROOT/Cargo.lock"
 
 main() {
 	readonly new_version="$1"
@@ -36,8 +37,11 @@ main() {
 	# update the version in cargo file
 	sed -i'' "/^version/ s/$current_version/$new_version/" "$CARGO_FILE"
 
+	# update Cargo.lock
+	cargo build
+
 	# commit the changes and tag the repo
-	git add "$CARGO_FILE"
+	git add "$CARGO_FILE" "$CARGO_LOCK"
 	git commit --quiet --message "upgrade version to $new_version"
 	git tag "$tag"
 
