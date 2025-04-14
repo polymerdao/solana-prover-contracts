@@ -125,3 +125,29 @@ make go-bindings
 This will create go module under the `./go` directory. Under the hood, we use a modified version of
 [solana-anchor-go](https://github.com/fragmetric-labs/solana-anchor-go), which can be found here:
 [https://github.com/polymerdao/solana-anchor-go]()
+
+
+## cache account resize
+
+The cache account that holds the proof chunks is currently limited to 3000 bytes. That was not always the case though
+so if you have created your account (ie called `ValidateEvent()`) while an older program was running, chances are
+you are going to get this error when try to load a new proof:
+
+```
+"Program 8zQzyWLSgLFpm2Si6HASkYidyL2paQaLZGADAQ5mSyPz invoke [1]",
+"Program log: Instruction: LoadProof",
+"Program log: AnchorError caused by account: cache_account. Error Code: ConstraintSpace. Error Number: 2019. Error Message: A space constraint was violated.",
+"Program log: Left: 3012",
+"Program log: Right: 1312",
+```
+
+What's happening there is that your account was created with a different size limit than is currently enforced by
+the program. Note the `Left: 3012` and `Right: 1312` logs. That's the current limit (3000 bytes) vs the old one
+(1300 bytes) plus 4 bytes to store the cache vector size and the 8 bytes for the account discriminator.
+
+The way to fix it is to tell the program to resize your account. We do that with a special instruction: `resize_cache`
+We have a convenience tool to call such instruction using your credentials. Try:
+
+```bash
+./target/release/proverctl --cluster https://api.devnet.solana.com resize-cache
+```
