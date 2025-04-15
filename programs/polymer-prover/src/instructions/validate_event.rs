@@ -1,12 +1,14 @@
 use crate::instructions::parse_event::{self, EthAddress};
+use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{keccak, secp256k1_recover::secp256k1_recover};
+use borsh::{BorshDeserialize, BorshSerialize};
 use sha2::{Digest, Sha256};
 use sha3::Keccak256;
 use std::fmt;
 
 use super::parse_event::EthEvent;
 
-#[derive(Debug, PartialEq)]
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone, PartialEq)]
 pub enum ValidateEventResult {
     InvalidSignature(String),
 
@@ -132,7 +134,7 @@ fn recover_signature(
     peptide_height: &[u8; 8],
     signature: &[u8; 64],
     recovery_id: u8,
-) -> Result<EthAddress, String> {
+) -> std::result::Result<EthAddress, String> {
     let message_hash = {
         let mut hasher = keccak::Hasher::default();
         hasher.hash(app_hash);
@@ -314,13 +316,17 @@ mod tests {
     #[ignore]
     fn test_invalid_membership_proof() {}
 
-    fn read_and_decode_proof_file(file_path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    fn read_and_decode_proof_file(
+        file_path: &str,
+    ) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
         let contents = std::fs::read_to_string(file_path).expect("could not read hex file");
         let decoded = hex::decode(&contents.trim().as_bytes()[2..])?;
         Ok(decoded)
     }
 
-    fn read_and_decode_event_file(file_path: &str) -> Result<Event, Box<dyn std::error::Error>> {
+    fn read_and_decode_event_file(
+        file_path: &str,
+    ) -> std::result::Result<Event, Box<dyn std::error::Error>> {
         let contents = std::fs::read_to_string(file_path).expect("could not read json file");
         let event: Event = serde_json::from_str(&contents).expect("error parsing JSON");
         Ok(event)

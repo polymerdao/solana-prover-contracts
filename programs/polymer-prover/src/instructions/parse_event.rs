@@ -1,4 +1,7 @@
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+use anchor_lang::prelude::*;
+use borsh::{BorshDeserialize, BorshSerialize};
+
+#[derive(Debug, PartialEq, Clone, Copy, Default, BorshSerialize, BorshDeserialize)]
 pub struct EthAddress([u8; 20]);
 
 impl EthAddress {
@@ -25,7 +28,7 @@ impl EthAddress {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, BorshSerialize, BorshDeserialize)]
 pub struct EthEvent {
     pub emitting_contract: EthAddress,
     pub topics: Vec<u8>,
