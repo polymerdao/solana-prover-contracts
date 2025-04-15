@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from "path";
 import { Program } from "@coral-xyz/anchor";
 import { PolymerProver } from "../target/types/polymer_prover";
+import { CpiClient } from "../target/types/cpi_client";
 import { assert } from "chai";
 import {
   ComputeBudgetProgram,
@@ -20,6 +21,7 @@ describe("localnet", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.polymer_prover as Program<PolymerProver>;
+  const cpiclient = anchor.workspace.cpi_client as Program<CpiClient>
 
   const wallet = provider.wallet as anchor.Wallet;
   const confirmOptions: ConfirmOptions = { commitment: "confirmed" };
@@ -31,8 +33,9 @@ describe("localnet", () => {
   const peptideChainId = new anchor.BN(901);
 
   before(async () => {
-    console.log(`PROGRAM ID: ${program.programId}`)
-    console.log(`WALLET:     ${wallet.publicKey.toBase58()}`)
+    console.log(`WALLET:            ${wallet.publicKey.toBase58()}`)
+    console.log(`POLYMER PROVER ID: ${program.programId}`)
+    console.log(`CPI CLIENT ID:     ${cpiclient.programId}`)
 
     const signature = await program.methods.initialize(clientType, signerAddress, peptideChainId)
       .accounts({ authority: wallet.publicKey })
@@ -48,7 +51,7 @@ describe("localnet", () => {
   })
 
   it("internal accounts are set after init", async () => {
-    const [pda, _bump] = PublicKey.findProgramAddressSync([Buffer.from("internal")], program.programId);
+    const pda = findProgramAddress([Buffer.from("internal")], program.programId);
     const account = await program.account.internalAccount.fetch(pda);
     assert.equal(account.clientType, clientType)
     assert.deepEqual(account.signerAddr, signerAddress)
@@ -93,7 +96,7 @@ describe("localnet", () => {
       .rpc(confirmOptions);
 
     // at this point the first chunk should be stored in the cache pda
-    const [cachePda, _bump] = PublicKey.findProgramAddressSync([newSigner.publicKey.toBuffer()], program.programId);
+    const cachePda = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId);
     const cache0 = await program.account.proofCacheAccount.fetch(cachePda, "confirmed")
     assert.deepEqual(proof.subarray(0, 800), cache0.cache)
 
@@ -150,8 +153,8 @@ describe("localnet", () => {
     ])
 
     // at this point the first chunks should be stored in their respective pda accounts
-    const [cachePda0, _bump0] = PublicKey.findProgramAddressSync([user0.publicKey.toBuffer()], program.programId);
-    const [cachePda1, _bump1] = PublicKey.findProgramAddressSync([user1.publicKey.toBuffer()], program.programId);
+    const cachePda0 = findProgramAddress([user0.publicKey.toBuffer()], program.programId);
+    const cachePda1 = findProgramAddress([user1.publicKey.toBuffer()], program.programId);
 
     {
       const caches = await Promise.all([
@@ -324,7 +327,7 @@ describe("localnet", () => {
 
   it("clears cache", async () => {
     const newSigner = await generateAndFundNewSigner()
-    const [cacheAccount, _bump] = PublicKey.findProgramAddressSync([newSigner.publicKey.toBuffer()], program.programId);
+    const cacheAccount = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId);
 
     // the cache account of the new signer will only be created when loadProof is called
     try {
@@ -377,7 +380,7 @@ describe("localnet", () => {
   it("runs proverctl", async () => {
     const newSigner = await generateAndFundNewSigner()
 
-    const [cacheAccount, _bump] = PublicKey.findProgramAddressSync([newSigner.publicKey.toBuffer()], program.programId);
+    const cacheAccount = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId);
 
     await program.methods
       .loadProof(proof.subarray(0, 600))
@@ -400,8 +403,50 @@ describe("localnet", () => {
     assert.ok(resizeCacheOuput.includes('proof cache successfully resized'))
   })
 
+  it("support cpi calls", async () => {
+    const newSigner = await generateAndFundNewSigner()
+    const cacheAccount = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId)
+
+    await cpiclient.methods
+      .callLoadProof()
+      .accounts({
+        authority: newSigner.publicKey,
+        cacheAccount: cacheAccount,
+      })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    const signature = await cpiclient.methods
+      .callValidateEvent()
+      .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
+      .accounts({
+        authority: newSigner.publicKey,
+        cacheAccount: cacheAccount,
+        internal: findProgramAddress([Buffer.from("internal")], program.programId),
+      })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    const tx = await provider.connection.getTransaction(signature, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+
+    console.log(tx.meta.logMessages)
+
+    assert.ok(findLogMessage("proof is valid", tx))
+    assert.ok(findLogMessage(
+      "proof validated: chain_id: 84532, emitting_contract: 0x30a0155082629940d4bd9cd41d6ef90876a0f1b5", tx
+    ))
+  })
+
+  function findProgramAddress(seeds: Array<Buffer | Uint8Array>, programId: PublicKey): PublicKey {
+    const [address, _bump] = PublicKey.findProgramAddressSync(seeds, programId);
+    return address
+  }
+
   function checkValidatEventResult(chainId: number, eventFileName: string, ...txs: VersionedTransactionResponse[]) {
-    const result = findEvent('validateEventEvent', txs)
+    const result = findEvent('validateEventEvent', ...txs)
     assert.ok(result)
 
     let topics = Buffer.alloc(0);
@@ -438,7 +483,7 @@ describe("localnet", () => {
     return signer
   }
 
-  function findEvent(name: string, txs: VersionedTransactionResponse[]): any {
+  function findEvent(name: string, ...txs: VersionedTransactionResponse[]): any {
     const eventParser = new anchor.EventParser(program.programId, program.coder);
     for (const tx of txs) {
       if (tx.meta === undefined || tx.meta.logMessages == undefined) continue
@@ -449,13 +494,26 @@ describe("localnet", () => {
     throw Error(`event ${name} not found`)
   }
 
+  function findLogMessage(needle: string, ...txs: VersionedTransactionResponse[]): string {
+    for (const tx of txs) {
+      if (tx.meta === undefined || tx.meta.logMessages == undefined) continue
+      for (const logMessage of tx.meta.logMessages) {
+        if (logMessage.includes(needle)) return logMessage
+      }
+    }
+    throw Error(`string ${needle} not found`)
+  }
+
   function runProverCtl(...args: string[]): string {
     try {
       const output = execSync(`cargo run --quiet --bin proverctl -- ${args.join(' ')} 2>&1`)
       return output.toString()
-    } catch (error) {
-      console.error('Command failed:', error)
-      throw error
+    } catch (err: any) {
+      console.error('Error message:', err.message);
+      if (err.stdout) console.error('stdout:\n', err.stdout.toString());
+      if (err.stderr) console.error('stderr:\n', err.stderr.toString());
+      if (err.status !== undefined) console.error('Exit code:', err.status);
+      throw err
     }
   }
 

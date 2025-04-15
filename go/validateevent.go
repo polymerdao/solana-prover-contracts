@@ -18,14 +18,18 @@ type ValidateEvent struct {
 	// [1] = [WRITE, SIGNER] authority
 	//
 	// [2] = [] internal
+	//
+	// [3] = [] instructions
+	// ··········· CPI
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
 // NewValidateEventInstructionBuilder creates a new `ValidateEvent` instruction builder.
 func NewValidateEventInstructionBuilder() *ValidateEvent {
 	nd := &ValidateEvent{
-		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
+		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
 	}
+	nd.AccountMetaSlice[3] = ag_solanago.Meta(Addresses["Sysvar1nstructions1111111111111111111111111"])
 	return nd
 }
 
@@ -146,6 +150,19 @@ func (inst *ValidateEvent) GetInternalAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(2)
 }
 
+// SetInstructionsAccount sets the "instructions" account.
+// CPI
+func (inst *ValidateEvent) SetInstructionsAccount(instructions ag_solanago.PublicKey) *ValidateEvent {
+	inst.AccountMetaSlice[3] = ag_solanago.Meta(instructions)
+	return inst
+}
+
+// GetInstructionsAccount gets the "instructions" account.
+// CPI
+func (inst *ValidateEvent) GetInstructionsAccount() *ag_solanago.AccountMeta {
+	return inst.AccountMetaSlice.Get(3)
+}
+
 func (inst ValidateEvent) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
@@ -175,6 +192,9 @@ func (inst *ValidateEvent) Validate() error {
 		if inst.AccountMetaSlice[2] == nil {
 			return errors.New("accounts.Internal is not set")
 		}
+		if inst.AccountMetaSlice[3] == nil {
+			return errors.New("accounts.Instructions is not set")
+		}
 	}
 	return nil
 }
@@ -191,10 +211,11 @@ func (inst *ValidateEvent) EncodeToTree(parent ag_treeout.Branches) {
 					instructionBranch.Child("Params[len=0]").ParentFunc(func(paramsBranch ag_treeout.Branches) {})
 
 					// Accounts of the instruction:
-					instructionBranch.Child("Accounts[len=3]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("   cache_", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("authority", inst.AccountMetaSlice.Get(1)))
-						accountsBranch.Child(ag_format.Meta(" internal", inst.AccountMetaSlice.Get(2)))
+					instructionBranch.Child("Accounts[len=4]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
+						accountsBranch.Child(ag_format.Meta("      cache_", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("   authority", inst.AccountMetaSlice.Get(1)))
+						accountsBranch.Child(ag_format.Meta("    internal", inst.AccountMetaSlice.Get(2)))
+						accountsBranch.Child(ag_format.Meta("instructions", inst.AccountMetaSlice.Get(3)))
 					})
 				})
 		})
@@ -212,9 +233,11 @@ func NewValidateEventInstruction(
 	// Accounts:
 	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
-	internal ag_solanago.PublicKey) *ValidateEvent {
+	internal ag_solanago.PublicKey,
+	instructions ag_solanago.PublicKey) *ValidateEvent {
 	return NewValidateEventInstructionBuilder().
 		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).
-		SetInternalAccount(internal)
+		SetInternalAccount(internal).
+		SetInstructionsAccount(instructions)
 }

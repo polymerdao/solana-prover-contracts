@@ -1,4 +1,8 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{
+    program::set_return_data, sysvar, sysvar::instructions::load_current_index_checked,
+    sysvar::instructions::load_instruction_at_checked,
+};
 use borsh::BorshDeserialize;
 
 pub mod instructions;
@@ -59,6 +63,11 @@ pub struct ValidateEvent<'info> {
         bump,
     )]
     pub internal: Account<'info, InternalAccount>,
+
+    /// CHECK: this is only used to verify whether the program is being called from off-chain or
+    /// CPI
+    #[account(address = sysvar::instructions::ID)]
+    pub instructions: AccountInfo<'info>,
 }
 
 #[account]
@@ -180,7 +189,22 @@ pub mod polymer_prover {
         );
 
         msg!("{}", result);
-        if let ValidateEventResult::Valid(chain_id, event) = result {
+
+        // Determine if the current instruction is a Cross-Program Invocation (CPI)
+        // by comparing the instruction's program_id to the current program's ID.
+        // If they differ, the instruction was invoked by another program.
+        let is_cpi = {
+            let ix = ctx.accounts.instructions.to_account_info();
+            let index = load_current_index_checked(&ix)? as usize;
+            let current_ix = load_instruction_at_checked(index, &ix)?;
+            current_ix.program_id != *ctx.program_id
+        };
+
+        // if we are being called by another program, set the return data so they can pick it up
+        // otherwise (we are being called by an off-chain agent) emit an event for them to parse
+        if is_cpi {
+            set_return_data(&result.try_to_vec()?);
+        } else if let ValidateEventResult::Valid(chain_id, event) = result {
             emit!(ValidateEventEvent {
                 chain_id,
                 topics: event.topics,
