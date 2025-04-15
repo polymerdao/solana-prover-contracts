@@ -7,6 +7,7 @@ skip-lint = false
 
 [programs.localnet]
 polymer_prover = "8zQzyWLSgLFpm2Si6HASkYidyL2paQaLZGADAQ5mSyPz"
+cpi_client = "qTdgaLBq1tWoTx81t3rZ1mDBTdJ7GvyPqnfVxSPv2sz"
 
 [registry]
 url = "https://api.apr.dev"

@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "programs/*",
+    "programs/polymer-prover",
+    "programs/cpi-client",
     "tools/proverctl",
 ]
 resolver = "2"
