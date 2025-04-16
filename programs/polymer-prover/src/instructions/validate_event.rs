@@ -27,11 +27,7 @@ impl fmt::Display for ValidateEventResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ValidateEventResult::InvalidProof(got, needed) => {
-                write!(
-                    f,
-                    "invalid proof: got {} bytes, at least {} are needed",
-                    got, needed
-                )
+                write!(f, "invalid proof: got {} bytes, at least {} are needed", got, needed)
             }
 
             ValidateEventResult::InvalidSignature(err_msg) => {
@@ -47,11 +43,7 @@ impl fmt::Display for ValidateEventResult {
             }
 
             ValidateEventResult::RecoveredInvalidSignerAddress(recovered) => {
-                write!(
-                    f,
-                    "recovered invalid signer address: {}",
-                    recovered.to_hex()
-                )
+                write!(f, "recovered invalid signer address: {}", recovered.to_hex())
             }
 
             ValidateEventResult::Valid(..) => {
@@ -73,8 +65,7 @@ pub fn handler(
         return ValidateEventResult::InvalidProof(proof_len, 123);
     }
 
-    let event_end: usize =
-        u16::from_be_bytes(<[u8; 2]>::try_from(&proof[121..123]).unwrap()).into();
+    let event_end: usize = u16::from_be_bytes(<[u8; 2]>::try_from(&proof[121..123]).unwrap()).into();
 
     // now, make sure we have enough data to read until the event ends. After it, we have the
     // membership proof, which will be checked later
@@ -160,14 +151,10 @@ fn recover_signature(
     }
 }
 
-fn verify_membership(
-    app_hash: &[u8; 32],
-    key: &[u8],
-    value: &[u8; 32],
-    proof: &[u8],
-) -> Option<ValidateEventResult> {
+fn verify_membership(app_hash: &[u8; 32], key: &[u8], value: &[u8; 32], proof: &[u8]) -> Option<ValidateEventResult> {
+    let proof_len = proof.len();
     // first make sure we have enough data to read the start of the first path
-    if proof.len() < 2 {
+    if proof_len < 2 {
         return Some(ValidateEventResult::InvalidMembershipProof(
             "can't read start of first path".to_string(),
         ));
@@ -176,8 +163,7 @@ fn verify_membership(
     let number_of_paths: usize = proof[0].into();
     let path_zero_start: usize = proof[1].into();
 
-    // add 1 here to cover for the first suffix_end read down below
-    if proof.len() < path_zero_start + 1 {
+    if path_zero_start >= proof_len {
         return Some(ValidateEventResult::InvalidMembershipProof(
             "can't read first path".to_string(),
         ));
@@ -199,15 +185,23 @@ fn verify_membership(
     };
 
     let mut offset: usize = path_zero_start;
+
     for _ in 0..number_of_paths {
+        if offset + 1 >= proof_len {
+            return Some(ValidateEventResult::InvalidMembershipProof(
+                "can't read offsets".to_string(),
+            ));
+        }
+
         let suffix_start: usize = proof[offset].into();
         let suffix_end: usize = proof[offset + 1].into();
 
-        if proof.len() < offset + suffix_end {
+        if offset + suffix_end > proof_len {
             return Some(ValidateEventResult::InvalidMembershipProof(
                 "can't read path".to_string(),
             ));
         }
+
         let mut hasher = Sha256::new();
         hasher.update(&proof[offset + 2..offset + suffix_start]);
         hasher.update(pre_hash);
@@ -276,14 +270,7 @@ mod tests {
     #[test]
     fn test_validate_proof_in_one_chunk() {
         let t = setup();
-
-        let result = handler(
-            &t.proof,
-            &t.client_type,
-            t.signer.as_bytes(),
-            t.peptide_chain_id,
-        );
-
+        let result = handler(&t.proof, &t.client_type, t.signer.as_bytes(), t.peptide_chain_id);
         validate_result(t, result);
     }
 
@@ -307,26 +294,50 @@ mod tests {
             event.unindexed_data
         );
     }
+    #[test]
+    fn test_truncated_proofs_dont_cause_panics() {
+        let t = setup();
+
+        for i in 0..(t.proof.len() - 1) {
+            let result = handler(
+                &t.proof[0..i].to_vec(),
+                &t.client_type,
+                t.signer.as_bytes(),
+                t.peptide_chain_id,
+            );
+            assert!(!matches!(result, ValidateEventResult::Valid(..)));
+        }
+    }
 
     #[test]
-    #[ignore]
-    fn test_invalid_recovered_signer_address() {}
+    fn test_invalid_recovered_signer_address() {
+        let mut t = setup();
+
+        // flip a bit where the signature lives to force recovering a different signer address
+        t.proof[33] ^= 1;
+        let result = handler(&t.proof, &t.client_type, t.signer.as_bytes(), t.peptide_chain_id);
+        println!("result: {}", result);
+        assert!(matches!(result, ValidateEventResult::RecoveredInvalidSignerAddress(_)));
+    }
 
     #[test]
-    #[ignore]
-    fn test_invalid_membership_proof() {}
+    fn test_invalid_membership_proof() {
+        let mut t = setup();
 
-    fn read_and_decode_proof_file(
-        file_path: &str,
-    ) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
+        // flip a bit where the membership proof key lives to force an invalid state root error
+        t.proof[119] ^= 1;
+        let result = handler(&t.proof, &t.client_type, t.signer.as_bytes(), t.peptide_chain_id);
+        println!("result: {}", result);
+        assert!(matches!(result, ValidateEventResult::InvalidStateRoot(_)));
+    }
+
+    fn read_and_decode_proof_file(file_path: &str) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
         let contents = std::fs::read_to_string(file_path).expect("could not read hex file");
         let decoded = hex::decode(&contents.trim().as_bytes()[2..])?;
         Ok(decoded)
     }
 
-    fn read_and_decode_event_file(
-        file_path: &str,
-    ) -> std::result::Result<Event, Box<dyn std::error::Error>> {
+    fn read_and_decode_event_file(file_path: &str) -> std::result::Result<Event, Box<dyn std::error::Error>> {
         let contents = std::fs::read_to_string(file_path).expect("could not read json file");
         let event: Event = serde_json::from_str(&contents).expect("error parsing JSON");
         Ok(event)

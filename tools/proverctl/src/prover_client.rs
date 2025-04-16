@@ -12,9 +12,7 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
-use solana_transaction_status_client_types::{
-    EncodedConfirmedTransactionWithStatusMeta, UiTransactionEncoding,
-};
+use solana_transaction_status_client_types::{EncodedConfirmedTransactionWithStatusMeta, UiTransactionEncoding};
 use std::time::Duration;
 
 pub struct Client {
@@ -70,8 +68,7 @@ impl Client {
     }
 
     fn find_cache_account(&self) -> Pubkey {
-        let (account, _) =
-            Pubkey::find_program_address(&[self.payer.pubkey().as_ref()], &self.program_id);
+        let (account, _) = Pubkey::find_program_address(&[self.payer.pubkey().as_ref()], &self.program_id);
         info!("CACHE: {}", account);
         account
     }
@@ -88,10 +85,7 @@ impl Client {
         }
     }
 
-    fn send_tx(
-        &self,
-        instruction: Instruction,
-    ) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
+    fn send_tx(&self, instruction: Instruction) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
         let recent_blockhash = self.client.get_latest_blockhash()?;
         let tx = Transaction::new_signed_with_payer(
             &[instruction],
@@ -117,11 +111,9 @@ impl Client {
 
         // retry 10 times, 1 second each
         let delay = Fixed::from(Duration::from_secs(1)).take(10);
-        let result = retry(delay, || {
-            match self.client.get_transaction_with_config(&sig, config) {
-                std::result::Result::Ok(val) => OperationResult::Ok(val),
-                std::result::Result::Err(err) => OperationResult::Retry(err),
-            }
+        let result = retry(delay, || match self.client.get_transaction_with_config(&sig, config) {
+            std::result::Result::Ok(val) => OperationResult::Ok(val),
+            std::result::Result::Err(err) => OperationResult::Retry(err),
         });
 
         Ok(result?)
