@@ -56,15 +56,13 @@ pub mod cpi_client {
     use polymer_prover::instructions::validate_event::ValidateEventResult;
 
     // load the proof here for simplicity
-    const PROOF_HEX: &str =
-        include_str!("../../polymer-prover/src/instructions/test-data/op-proof-small.hex");
+    const PROOF_HEX: &str = include_str!("../../polymer-prover/src/instructions/test-data/op-proof-small.hex");
 
     /// calls load_proof on the polymer_prover program with a pre-loaded proof
     pub fn call_load_proof(ctx: Context<CallLoadProof>) -> Result<()> {
         msg!("calling load_proof from cpi_client");
 
-        let proof =
-            Vec::from_hex(&PROOF_HEX.trim_start_matches("0x")).expect("could not load proof?");
+        let proof = Vec::from_hex(&PROOF_HEX.trim_start_matches("0x")).expect("could not load proof?");
 
         polymer_prover::cpi::load_proof(
             CpiContext::new(

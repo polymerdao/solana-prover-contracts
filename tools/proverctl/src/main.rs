@@ -56,8 +56,7 @@ fn main() -> Result<()> {
     let signer = if cli.keypair != "" {
         Keypair::from_base58_string(&cli.keypair)
     } else {
-        read_keypair_file(cli.keypair_path)
-            .map_err(|e| anyhow::anyhow!("Failed to read keypair: {}", e))?
+        read_keypair_file(cli.keypair_path).map_err(|e| anyhow::anyhow!("Failed to read keypair: {}", e))?
     };
 
     let client = Client::new(cli.program_id, signer, &cli.cluster)?;
