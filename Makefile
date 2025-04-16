@@ -4,7 +4,7 @@ build:
 
 .PHONY: test
 test:
-	cargo test -- --nocapture
+	cargo test --workspace --locked -- --nocapture
 
 .PHONY: integration-test
 integration-test:
@@ -25,10 +25,10 @@ go-bindings: build
 		--src=./target/idl/polymer_prover.json \
 		--dst=./go \
 		--mod github.com/polymerdao/solana-prover-contracts/go \
-		--remove-account-suffix && \
-	cd ./go && \
-	go mod tidy && \
-	go test . -count=1
+		--remove-account-suffix  && \
+		cd ./go && \
+		go mod tidy && \
+		go test . -count=1
 
 # for now we need to install our own fork of solana-anchor-go because theirs is broken. See diff for against
 # upstream for the fixes we needed to put in place
