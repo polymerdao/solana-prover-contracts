@@ -1,4 +1,4 @@
-name: solana-prover-contracts
+name: Solana Prover Contract
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: solanafoundation/anchor:v0.31.0
+  IMAGE_NAME: solanafoundation/anchor:v0.31.1
 
   # There's a lot going on in this job. We want to use the anchor docker image to avoid having to build
   # the toolchains ourselves. However, this image does not come with golang, so we could not build the go bindings
