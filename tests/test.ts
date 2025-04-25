@@ -506,6 +506,7 @@ describe("localnet", () => {
 
   function runProverCtl(...args: string[]): string {
     try {
+      args = ['--program-id', program.programId.toString(), ...args]
       const output = execSync(`cargo run --quiet --bin proverctl -- ${args.join(' ')} 2>&1`)
       return output.toString()
     } catch (err: any) {
