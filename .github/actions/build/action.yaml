@@ -15,13 +15,14 @@ inputs:
 # The solution (or workaround) is to use setup-go to install go on the runner and then make it available to
 # the container via mounted volumes
 
-env:
-  IMAGE_NAME: solanafoundation/anchor:v0.31.1
-
 runs:
   using: "composite"
  # id: build-and-test
   steps:
+    - name: Configure Git credentials
+      shell: bash
+      run: echo "IMAGE_NAME=solanafoundation/anchor:v0.31.1" >> $GITHUB_ENV
+
     - name: Configure Git credentials
       shell: bash
       run: |
