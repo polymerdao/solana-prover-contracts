@@ -15,5 +15,10 @@ jobs:
   build-test-solana-prover-contracts:
     runs-on: ubuntu-22.04-16core
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Build and test
         uses: ./.github/actions/build
