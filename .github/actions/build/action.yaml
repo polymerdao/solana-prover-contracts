@@ -49,9 +49,11 @@ runs:
         restore-keys: |
           yarn-${{ runner.os }}-
 
-    # TODO upgrade to v0.6.0 when available. that should fix the current caching issues
     - name: Cache Docker images
-      uses: ScribeMD/docker-cache@0.5.0
+      # v0.5.0 is broken until they merge this fix https://github.com/ScribeMD/docker-cache/pull/835
+      # use this fork in the meantime
+      # uses: ScribeM/docker-cache@0.5.0
+      uses: AndreKurait/docker-cache@0.6.0
       with:
         key: docker-${{ runner.os }}-${{ env.IMAGE_NAME }}
         read-only: true # disable saving cache upon cache miss
