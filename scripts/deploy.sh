@@ -7,6 +7,11 @@ KEYPAIR_FILE="$(mktemp)"
 # always remove the keypair to avoid leaks
 trap 'rm -rf $KEYPAIR_FILE' EXIT
 
+SOLANA_INSTALLER_URL='https://release.anza.xyz/v2.1.21/install'
+
+# use this so the script can be run from anywhere
+ROOT="$(realpath "$(dirname "$(realpath "$0")")"/..)"
+
 check_env() {
 	if [ -z "$PROGRAM_ID" ]; then
 		echo "PROGRAM_ID env variable is not set" >&2
@@ -29,18 +34,17 @@ check_env() {
 main() {
 	check_env
 
+	if ! command -v solana &>/dev/null; then
+		echo "solana cli is not found. Will try to install it from $SOLANA_INSTALLER_URL"
+		sh -c "$(curl -sSfL $SOLANA_INSTALLER_URL)"
+		export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+	fi
+
 	# this takes care of checking if the cluster is valid
 	solana config set --url "$CLUSTER"
 
 	echo -n "$KEYPAIR" >"$KEYPAIR_FILE"
 	solana config set --keypair "$KEYPAIR_FILE"
-
-	if ! solana program show "$PROGRAM_ID" &>/dev/null; then
-		# program does not exist in the cluster, deploy it
-		echo "> deploying program '$PROGRAM_ID' to cluster '$CLUSTER' for the first time"
-		echo "> try that again with the program keypair"
-		exit 1
-	fi
 
 	# the release downloader fetches the latest release by default but the tag must be empty
 	# using 'latest' will not work
@@ -55,6 +59,13 @@ main() {
 		--pattern polymer_prover.so \
 		--clobber \
 		--output polymer_prover.so
+
+	if ! solana program show "$PROGRAM_ID" &>/dev/null; then
+		# program does not exist in the cluster, deploy it for the first time. For which we need the
+		# program keypair instead of the program id
+		echo "> deploying program '$PROGRAM_ID' to cluster '$CLUSTER' for the first time"
+		PROGRAM_ID="$ROOT/keypair/polymer_prover-keypair.json"
+	fi
 
 	# finally, deploy the program
 	solana program deploy \

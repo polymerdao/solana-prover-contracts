@@ -19,12 +19,11 @@ on:
         required: false
 
 permissions:
-  actions: read
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
-
 
 jobs:
   deploy:
@@ -43,3 +42,4 @@ jobs:
           CLUSTER: ${{ inputs.cluster }}
           VERSION: ${{ inputs.version }}
           KEYPAIR: ${{ secrets.KEYPAIR }}
+          GH_TOKEN: ${{ github.token }}
