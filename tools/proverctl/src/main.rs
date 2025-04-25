@@ -35,7 +35,7 @@ struct Cli {
     #[arg(long, default_value = "")]
     keypair: String,
 
-    #[arg(long, default_value = "8zQzyWLSgLFpm2Si6HASkYidyL2paQaLZGADAQ5mSyPz")]
+    #[arg(long)]
     program_id: Pubkey,
 }
 
