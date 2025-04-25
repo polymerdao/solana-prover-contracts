@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-test-release:
+    runs-on: ubuntu-22.04-16core
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and test
+        uses: ./.github/actions/build
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save compiled program
+        if: success()
+        run: |
+          rm -rf release
+          mkdir -p release
+          sha256sum target/deploy/polymer_prover.so > release/polymer_prover.sha256
+          cp target/deploy/polymer_prover.so release
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/**
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      # TODO publish go bindings
