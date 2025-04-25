@@ -18,7 +18,7 @@ idl-build = ["anchor-lang/idl-build"]
 
 
 [dependencies]
-anchor-lang = { version = "0.31.0", features = ["init-if-needed"] }
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 # https://github.com/coral-xyz/anchor/issues/3606#issuecomment-2738357920
 bytemuck_derive = "=1.8.1"
 hex = "0.4.3"
