@@ -27,7 +27,7 @@ concurrency:
 
 
 jobs:
-  build-test-release:
+  deploy:
     runs-on: ubuntu-22.04-16core
     environment: ${{ inputs.cluster }}
     steps:
