@@ -1,6 +1,12 @@
 name: 'Solana Prover Contract - build and test'
 description: 'Builds and tests the solana prover contract program'
 
+inputs:
+  token:
+    description: 'github token to update the git config and allow accessing private repos'
+    required: true
+
+
 # There's a lot going on in this job. We want to use the anchor docker image to avoid having to build
 # the toolchains ourselves. However, this image does not come with golang, so we could not build the go bindings
 # We could install go within the container during runtime, but we'd have to hardcode the go version which will be
@@ -17,14 +23,10 @@ runs:
  # id: build-and-test
   steps:
     - name: Configure Git credentials
+      shell: bash
       run: |
         git config --global credential.helper 'cache --timeout=3600'
-        git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: '0'
+        git config --global url."https://x-access-token:${{ inputs.token }}@github.com/".insteadOf "https://github.com/"
 
     - name: Cache Rust build artifacts
       uses: actions/cache@v4
@@ -61,6 +63,7 @@ runs:
         cache: true
 
     - name: Run build & test in Anchor container
+      shell: bash
       run: |
         docker run --rm \
           -v ${{ github.workspace }}:/app \
