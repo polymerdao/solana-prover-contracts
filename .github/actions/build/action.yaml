@@ -56,7 +56,6 @@ runs:
       uses: AndreKurait/docker-cache@0.6.0
       with:
         key: docker-${{ runner.os }}-${{ env.IMAGE_NAME }}
-        read-only: true # disable saving cache upon cache miss
 
     - name: Set up Go
       uses: actions/setup-go@v5
