@@ -1,0 +1,76 @@
+name: 'Solana Prover Contract - build and test'
+description: 'Builds and tests the solana prover contract program'
+
+# There's a lot going on in this job. We want to use the anchor docker image to avoid having to build
+# the toolchains ourselves. However, this image does not come with golang, so we could not build the go bindings
+# We could install go within the container during runtime, but we'd have to hardcode the go version which will be
+# hard to maintain (note that the setup-go action checks the version from the go.mod file. This also excludes
+# modifying the actual image and push it to our registry.
+# The solution (or workaround) is to use setup-go to install go on the runner and then make it available to
+# the container via mounted volumes
+
+env:
+  IMAGE_NAME: solanafoundation/anchor:v0.31.1
+
+runs:
+  using: "composite"
+  id: build-and-test
+  steps:
+    - name: Configure Git credentials
+      run: |
+        git config --global credential.helper 'cache --timeout=3600'
+        git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: '0'
+
+    - name: Cache Rust build artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          target
+          ~/.cargo
+        key: rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          rust-${{ runner.os }}-
+
+    - name: Cache Yarn
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/yarn
+          node_modules
+        key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: |
+          yarn-${{ runner.os }}-
+
+    # TODO upgrade to v0.6.0 when available. that should fix the current caching issues
+    - name: Cache Docker images
+      uses: ScribeMD/docker-cache@0.5.0
+      with:
+        key: docker-${{ runner.os }}-${{ env.IMAGE_NAME }}
+        read-only: true # disable saving cache upon cache miss
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go/go.mod
+        cache-dependency-path: go/go.sum
+        cache: true
+
+    - name: Run build & test in Anchor container
+      run: |
+        docker run --rm \
+          -v ${{ github.workspace }}:/app \
+          -v $HOME/.cargo/git:/root/.cargo/git \
+          -v $HOME/.cargo/registry:/root/.cargo/registry \
+          -v "$(go env GOPATH)":/root/gopath \
+          -v "$(go env GOROOT)":/root/goroot \
+          -v "$(go env GOCACHE)":/root/gocache \
+          -v "$(go env GOMODCACHE)":/root/gomodcache \
+          -v ${{ github.workspace }}/target:/app/target \
+          -w /app \
+          ${{ env.IMAGE_NAME }} \
+          bash ./scripts/ci.sh

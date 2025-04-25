@@ -151,3 +151,17 @@ We have a convenience tool to call such instruction using your credentials. Try:
 ```bash
 ./target/release/proverctl --cluster https://api.devnet.solana.com resize-cache
 ```
+
+
+# deployments
+
+program id is the public key of the program keypair. Once the program is deployed, only the public key is needed
+as long as the upgrade authority (the deployer) knows its own key. In other words, the program keypair is single use
+private key that once the program is deployed, it can be discarded.
+
+anchor build
+
+
+
+
+https://hub.docker.com/r/solanafoundation/anchor/tags
