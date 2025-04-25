@@ -1,0 +1,45 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster:
+        description: 'Cluster to deploy to'
+        required: true
+        default: devnet
+        type: choice
+        options:
+          - mainnet-beta
+          - testnet
+          - devnet
+      version:
+        description: 'The version of contracts to deploy'
+        default: 'latest'
+        type: string
+        required: false
+
+permissions:
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+
+jobs:
+  build-test-release:
+    runs-on: ubuntu-22.04-16core
+    environment: ${{ inputs.cluster }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Deploy
+        run: ./scripts/deploy.sh
+        env:
+          PROGRAM_ID: 'EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud'
+          CLUSTER: ${{ inputs.cluster }}
+          VERSION: ${{ inputs.version }}
+          KEYPAIR: ${{ secrets.KEYPAIR }}
