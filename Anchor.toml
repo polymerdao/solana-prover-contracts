@@ -6,8 +6,17 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-polymer_prover = "8zQzyWLSgLFpm2Si6HASkYidyL2paQaLZGADAQ5mSyPz"
+polymer_prover = "EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud"
 cpi_client = "qTdgaLBq1tWoTx81t3rZ1mDBTdJ7GvyPqnfVxSPv2sz"
+
+[programs.devnet]
+polymer_prover = "EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud"
+
+[programs.testnet]
+polymer_prover = "EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud"
+
+[programs.mainnet]
+polymer_prover = "EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud"
 
 [registry]
 url = "https://api.apr.dev"
