@@ -14,7 +14,7 @@ env:
 
 runs:
   using: "composite"
-  id: build-and-test
+ # id: build-and-test
   steps:
     - name: Configure Git credentials
       run: |
