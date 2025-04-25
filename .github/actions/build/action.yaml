@@ -21,7 +21,7 @@ runs:
   steps:
     - name: Configure Git credentials
       shell: bash
-      run: echo "IMAGE_NAME=solanafoundation/anchor:v0.31.1" >> $GITHUB_ENV
+      run: echo "IMAGE_NAME=solanafoundation/anchor:v0.31.0" >> $GITHUB_ENV
 
     - name: Configure Git credentials
       shell: bash
