@@ -6,38 +6,20 @@ inputs:
     description: 'github token to update the git config and allow accessing private repos'
     required: true
 
-
-# There's a lot going on in this job. We want to use the anchor docker image to avoid having to build
-# the toolchains ourselves. However, this image does not come with golang, so we could not build the go bindings
-# We could install go within the container during runtime, but we'd have to hardcode the go version which will be
-# hard to maintain (note that the setup-go action checks the version from the go.mod file. This also excludes
-# modifying the actual image and push it to our registry.
-# The solution (or workaround) is to use setup-go to install go on the runner and then make it available to
-# the container via mounted volumes
-
 runs:
   using: "composite"
- # id: build-and-test
   steps:
-    - name: Configure Git credentials
+    - name: Read Anchor version
       shell: bash
-      run: echo "IMAGE_NAME=solanafoundation/anchor:v0.31.1" >> $GITHUB_ENV
+      run: |
+        anchor_version="$( yq '.dependencies.anchor-lang.version' ./programs/polymer-prover/Cargo.toml )"
+        echo "ANCHOR_VERSION=$anchor_version" >> $GITHUB_ENV
 
     - name: Configure Git credentials
       shell: bash
       run: |
         git config --global credential.helper 'cache --timeout=3600'
         git config --global url."https://x-access-token:${{ inputs.token }}@github.com/".insteadOf "https://github.com/"
-
-    - name: Cache Rust build artifacts
-      uses: actions/cache@v4
-      with:
-        path: |
-          target
-          ~/.cargo
-        key: rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          rust-${{ runner.os }}-
 
     - name: Cache Yarn
       uses: actions/cache@v4
@@ -55,7 +37,10 @@ runs:
       # uses: ScribeM/docker-cache@0.5.0
       uses: AndreKurait/docker-cache@0.6.0
       with:
-        key: docker-${{ runner.os }}-${{ env.IMAGE_NAME }}
+        key: docker-${{ runner.os }}-${{ env.ANCHOR_VERSION }}
+
+    - name: Install rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
 
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -64,18 +49,16 @@ runs:
         cache-dependency-path: go/go.sum
         cache: true
 
-    - name: Run build & test in Anchor container
+    # this is needed by cargo in the next step
+    - name: Install hidapi dependencies
       shell: bash
       run: |
-        docker run --rm \
-          -v ${{ github.workspace }}:/app \
-          -v $HOME/.cargo/git:/root/.cargo/git \
-          -v $HOME/.cargo/registry:/root/.cargo/registry \
-          -v "$(go env GOPATH)":/root/gopath \
-          -v "$(go env GOROOT)":/root/goroot \
-          -v "$(go env GOCACHE)":/root/gocache \
-          -v "$(go env GOMODCACHE)":/root/gomodcache \
-          -v ${{ github.workspace }}/target:/app/target \
-          -w /app \
-          ${{ env.IMAGE_NAME }} \
-          bash ./scripts/ci.sh
+        sudo apt update
+        sudo apt install -y pkg-config build-essential libudev-dev
+
+    - name: Run build & test
+      shell: bash
+      run: |
+        . ./scripts/solana.sh
+        . ./scripts/anchor.sh
+        ./scripts/ci.sh

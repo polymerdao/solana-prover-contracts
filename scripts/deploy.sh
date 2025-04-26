@@ -7,8 +7,6 @@ KEYPAIR_FILE="$(mktemp)"
 # always remove the keypair to avoid leaks
 trap 'rm -rf $KEYPAIR_FILE' EXIT
 
-SOLANA_INSTALLER_URL='https://release.anza.xyz/v2.1.21/install'
-
 # use this so the script can be run from anywhere
 ROOT="$(realpath "$(dirname "$(realpath "$0")")"/..)"
 
@@ -34,11 +32,8 @@ check_env() {
 main() {
 	check_env
 
-	if ! command -v solana &>/dev/null; then
-		echo "solana cli is not found. Will try to install it from $SOLANA_INSTALLER_URL"
-		sh -c "$(curl -sSfL $SOLANA_INSTALLER_URL)"
-		export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
-	fi
+	# install the solana sdk
+	. "$ROOT/scripts/solana.sh"
 
 	# this takes care of checking if the cluster is valid
 	solana config set --url "$CLUSTER"
