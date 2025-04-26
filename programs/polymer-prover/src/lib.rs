@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
     program::set_return_data, sysvar, sysvar::instructions::load_current_index_checked,

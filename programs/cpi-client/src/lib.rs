@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{program::get_return_data, sysvar};
 use borsh::BorshDeserialize;
