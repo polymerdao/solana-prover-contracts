@@ -1,3 +1,5 @@
+PROVIDER_WALLET := ~/.config/solana/id.json
+
 .PHONY: build
 build:
 	anchor build
@@ -8,7 +10,7 @@ test:
 
 .PHONY: integration-test
 integration-test:
-	anchor test
+	anchor test --provider.wallet $(PROVIDER_WALLET)
 
 .PHONY: go-bindings
 go-bindings: build
