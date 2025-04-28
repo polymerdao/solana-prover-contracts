@@ -45,4 +45,13 @@ jobs:
           prerelease: false
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      # TODO publish go bindings
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+          cache: true
+
+      - name: Check go registry
+        run: |
+          GOPROXY=proxy.golang.org go list -m github.com/polymerdao/solana-prover-contracts@${GITHUB_REF#refs/tags/}
