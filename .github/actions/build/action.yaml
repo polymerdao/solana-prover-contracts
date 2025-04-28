@@ -5,6 +5,10 @@ inputs:
   token:
     description: 'github token to update the git config and allow accessing private repos'
     required: true
+  verifiable:
+    description: 'generate a verifiable build with anchor build --verifiable'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -62,3 +66,5 @@ runs:
         . ./scripts/solana.sh
         . ./scripts/anchor.sh
         ./scripts/ci.sh
+      env:
+        VERIFIABLE: ${{ inputs.verifiable }}
