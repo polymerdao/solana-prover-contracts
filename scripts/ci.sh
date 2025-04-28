@@ -31,3 +31,7 @@ if ! git diff --quiet; then
 	git status --porcelain
 	exit 1
 fi
+
+if [ -n "$VERIFIABLE" ]; then
+	make build-verifiable
+fi

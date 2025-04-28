@@ -4,6 +4,10 @@ PROVIDER_WALLET := ~/.config/solana/id.json
 build:
 	anchor build
 
+.PHONY: build-verifiable
+build-verifiable:
+	anchor build --verifiable --program-name polymer_prover
+
 .PHONY: test
 test:
 	cargo test --workspace --locked -- --nocapture
