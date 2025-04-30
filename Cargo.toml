@@ -2,6 +2,7 @@
 members = [
     "programs/polymer-prover",
     "programs/cpi-client",
+    "programs/mars",
     "tools/proverctl",
 ]
 resolver = "2"
