@@ -4,6 +4,7 @@ import * as path from "path";
 import { Program } from "@coral-xyz/anchor";
 import { PolymerProver } from "../target/types/polymer_prover";
 import { CpiClient } from "../target/types/cpi_client";
+import { Mars } from "../target/types/mars";
 import { assert } from "chai";
 import {
   ComputeBudgetProgram,
@@ -22,6 +23,7 @@ describe("localnet", () => {
   anchor.setProvider(provider);
   const program = anchor.workspace.polymer_prover as Program<PolymerProver>;
   const cpiclient = anchor.workspace.cpi_client as Program<CpiClient>
+  const mars = anchor.workspace.mars as Program<Mars>
 
   const wallet = provider.wallet as anchor.Wallet;
   const confirmOptions: ConfirmOptions = { commitment: "confirmed" };
@@ -36,6 +38,7 @@ describe("localnet", () => {
     console.log(`WALLET:            ${wallet.publicKey.toBase58()}`)
     console.log(`POLYMER PROVER ID: ${program.programId}`)
     console.log(`CPI CLIENT ID:     ${cpiclient.programId}`)
+    console.log(`MARS ID:           ${mars.programId}`)
 
     const signature = await program.methods.initialize(clientType, signerAddress, peptideChainId)
       .accounts({ authority: wallet.publicKey })
@@ -439,6 +442,26 @@ describe("localnet", () => {
       "proof validated: chain_id: 84532, emitting_contract: 0x30a0155082629940d4bd9cd41d6ef90876a0f1b5", tx
     ))
   })
+
+  it("runs mars", async () => {
+    const data = "foo bar zoo"
+    const signer = await generateAndFundNewSigner()
+    const dataAccount = await generateAndFundNewSigner()
+
+    await mars.methods
+      .initialize()
+      .accounts({ user: signer.publicKey, data: dataAccount.publicKey })
+      .signers([signer, dataAccount])
+      .rpc(confirmOptions);
+
+    await mars.methods
+      .setData({ data: data })
+      .accounts({ data: dataAccount.publicKey })
+      .rpc(confirmOptions);
+
+    const account = await mars.account.data.fetch(dataAccount.publicKey);
+    assert.equal(data, account.data.toString())
+  });
 
   function findProgramAddress(seeds: Array<Buffer | Uint8Array>, programId: PublicKey): PublicKey {
     const [address, _bump] = PublicKey.findProgramAddressSync(seeds, programId);

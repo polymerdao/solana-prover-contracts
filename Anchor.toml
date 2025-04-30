@@ -8,6 +8,7 @@ skip-lint = false
 [programs.localnet]
 polymer_prover = "EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud"
 cpi_client = "qTdgaLBq1tWoTx81t3rZ1mDBTdJ7GvyPqnfVxSPv2sz"
+mars = "Et42Hf56gX2ABd7AHkKHMP8Ckh3LYF5CvPUKUG6g8qxy"
 
 [programs.devnet]
 polymer_prover = "EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud"
