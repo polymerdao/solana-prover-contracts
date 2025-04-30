@@ -446,20 +446,21 @@ describe("localnet", () => {
   it("runs mars", async () => {
     const data = "foo bar zoo"
     const signer = await generateAndFundNewSigner()
-    const dataAccount = await generateAndFundNewSigner()
 
     await mars.methods
       .initialize()
-      .accounts({ user: signer.publicKey, data: dataAccount.publicKey })
-      .signers([signer, dataAccount])
+      .accounts({ user: signer.publicKey })
+      .signers([signer])
       .rpc(confirmOptions);
+
+    const dataAccount = findProgramAddress([signer.publicKey.toBuffer()], mars.programId);
 
     await mars.methods
       .setData({ data: data })
-      .accounts({ data: dataAccount.publicKey })
+      .accounts({ data: dataAccount })
       .rpc(confirmOptions);
 
-    const account = await mars.account.data.fetch(dataAccount.publicKey);
+    const account = await mars.account.data.fetch(dataAccount);
     assert.equal(data, account.data.toString())
   });
 
