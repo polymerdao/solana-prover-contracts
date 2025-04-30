@@ -1,7 +1,7 @@
 #![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
 
-declare_id!("Et42Hf56gX2ABd7AHkKHMP8Ckh3LYF5CvPUKUG6g8qxy");
+declare_id!("5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u");
 
 const DISCRIMINATOR_SIZE: usize = 8;
 
@@ -33,7 +33,13 @@ pub struct Data {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = user, space = DISCRIMINATOR_SIZE + Data::INIT_SPACE)]
+    #[account(
+        init_if_needed,
+        seeds = [user.key().as_ref()],
+        bump,
+        payer = user,
+        space = DISCRIMINATOR_SIZE + Data::INIT_SPACE
+    )]
     pub data: Account<'info, Data>,
     #[account(mut)]
     pub user: Signer<'info>,
