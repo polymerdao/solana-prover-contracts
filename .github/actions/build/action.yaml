@@ -5,10 +5,12 @@ inputs:
   token:
     description: 'github token to update the git config and allow accessing private repos'
     required: true
-  release:
-    description: 'generates the release binaries (with anchor build --verifiable) for all envs'
-    required: false
-    default: ''
+
+secrets:
+    PROGRAM_KEYPAIR_DEVNET:
+        required: false
+    PROGRAM_KEYPAIR_MAIN:
+        required: false
 
 runs:
   using: "composite"
@@ -69,7 +71,7 @@ runs:
 
     # since it's a bit of a pain to set up the toolchain, let's try to reuse it to build the "release" artefacts
     - name: Build devnet release
-      if: ${{ inputs.release != '' }}
+      if: ${{ secrets.PROGRAM_KEYPAIR_DEVNET != '' }}
       shell: bash
       run: ./scripts/build-release.sh
       env:
@@ -77,7 +79,7 @@ runs:
         TYPE: dev
 
     - name: Build main release
-      if: ${{ inputs.release != '' }}
+      if: ${{ secrets.PROGRAM_KEYPAIR_MAIN != '' }}
       shell: bash
       run: ./scripts/build-release.sh
       env:

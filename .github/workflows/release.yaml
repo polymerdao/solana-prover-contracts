@@ -26,7 +26,8 @@ jobs:
         uses: ./.github/actions/build
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          release: 'yes'
+          PROGRAM_KEYPAIR_DEVNET: ${{ secrets.PROGRAM_KEYPAIR_DEVNET }}
+          PROGRAM_KEYPAIR_MAIN: ${{ secrets.PROGRAM_KEYPAIR_MAIN }}
 
       - name: Save compiled program
         if: success()
