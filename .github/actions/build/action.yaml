@@ -5,12 +5,10 @@ inputs:
   token:
     description: 'github token to update the git config and allow accessing private repos'
     required: true
-
-secrets:
-    PROGRAM_KEYPAIR_DEVNET:
-        required: false
-    PROGRAM_KEYPAIR_MAIN:
-        required: false
+    program_keypair_devnet:
+      required: false
+    program_keypair_main:
+      required: false
 
 runs:
   using: "composite"
@@ -71,17 +69,17 @@ runs:
 
     # since it's a bit of a pain to set up the toolchain, let's try to reuse it to build the "release" artefacts
     - name: Build devnet release
-      if: ${{ secrets.PROGRAM_KEYPAIR_DEVNET != '' }}
+      if: ${{ inputs.PROGRAM_KEYPAIR_DEVNET != '' }}
       shell: bash
       run: ./scripts/build-release.sh
       env:
-        PROGRAM_KEYPAIR: ${{ secrets.PROGRAM_KEYPAIR_DEVNET }}
+        PROGRAM_KEYPAIR: ${{ inputs.PROGRAM_KEYPAIR_DEVNET }}
         TYPE: dev
 
     - name: Build main release
-      if: ${{ secrets.PROGRAM_KEYPAIR_MAIN != '' }}
+      if: ${{ inputs.PROGRAM_KEYPAIR_MAIN != '' }}
       shell: bash
       run: ./scripts/build-release.sh
       env:
-        PROGRAM_KEYPAIR: ${{ secrets.PROGRAM_KEYPAIR_MAIN }}
+        PROGRAM_KEYPAIR: ${{ inputs.PROGRAM_KEYPAIR_MAIN }}
         TYPE: main

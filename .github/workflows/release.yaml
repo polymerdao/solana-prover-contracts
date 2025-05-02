@@ -26,7 +26,6 @@ jobs:
         uses: ./.github/actions/build
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-        secrets: inherit
 
       - name: Save compiled program
         if: success()
