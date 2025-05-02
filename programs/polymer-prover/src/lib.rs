@@ -13,7 +13,12 @@ use instructions::*;
 
 const DISCRIMINATOR_SIZE: usize = 8;
 
-declare_id!("EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud");
+// This program ID is used as is when deploying the program to solana devnet and used from our
+// staging env.
+// We changing to something else when deploying to solana devnet (again) so we can use it from our
+// production env and when this is deployed to solana mainnet.
+// See the ./scripts/build-release.sh script and .github/actions/build/action.yaml action
+declare_id!("FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3");
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {

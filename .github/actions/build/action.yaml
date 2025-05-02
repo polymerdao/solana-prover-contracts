@@ -5,10 +5,15 @@ inputs:
   token:
     description: 'github token to update the git config and allow accessing private repos'
     required: true
-  verifiable:
-    description: 'generate a verifiable build with anchor build --verifiable'
+    type: string
+  program_keypair_devnet:
+    description: 'program keypair content for devnet release binary. leave empty to avoid building it'
     required: false
-    default: ''
+    type: string
+  program_keypair_main:
+    description: 'program keypair content for testnet/mainnet release binary. leave empty to avoid building it'
+    required: false
+    type: string
 
 runs:
   using: "composite"
@@ -66,5 +71,20 @@ runs:
         . ./scripts/solana.sh
         . ./scripts/anchor.sh
         ./scripts/ci.sh
+
+    # since it's a bit of a pain to set up the toolchain, let's try to reuse it to build the "release" artefacts
+    - name: Build devnet release
+      if: ${{ inputs.program_keypair_devnet != '' }}
+      shell: bash
+      run: ./scripts/build-release.sh
       env:
-        VERIFIABLE: ${{ inputs.verifiable }}
+        PROGRAM_KEYPAIR: ${{ inputs.program_keypair_devnet }}
+        TYPE: dev
+
+    - name: Build main release
+      if: ${{ inputs.program_keypair_main != '' }}
+      shell: bash
+      run: ./scripts/build-release.sh
+      env:
+        PROGRAM_KEYPAIR: ${{ inputs.program_keypair_main }}
+        TYPE: main
