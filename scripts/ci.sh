@@ -26,12 +26,8 @@ make install-solana-anchor-go
 make go-bindings
 
 # finding unstaged changes will mean something was not correctly commited, like the go bindings
-if ! git diff --quiet; then
+if ! git diff --quiet || ! git diff --cached --quiet; then
 	echo "repo is modified!"
 	git status --porcelain
 	exit 1
-fi
-
-if [ -n "$VERIFIABLE" ]; then
-	make build-verifiable
 fi

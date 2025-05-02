@@ -26,15 +26,11 @@ jobs:
         uses: ./.github/actions/build
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          verifiable: 'yes'
+          release: 'yes'
 
       - name: Save compiled program
         if: success()
-        run: |
-          rm -rf release
-          mkdir -p release
-          sha256sum target/verifiable/polymer_prover.so > release/polymer_prover.sha256
-          cp target/verifiable/polymer_prover.so release
+        run: ./scripts/package-release.sh
 
       - name: Create release
         uses: softprops/action-gh-release@v2
