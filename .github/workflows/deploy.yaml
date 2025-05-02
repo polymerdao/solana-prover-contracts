@@ -37,17 +37,24 @@ jobs:
 
       - name: Deploy
         run: |
-          # provide the keypair via this temp file for easier testing
-          echo -n '${{ secrets.KEYPAIR }}' > /tmp/keypair.json
+          # provide the keypairs via these temp files for easier testing
+          if [ "$CLUSTER" = 'devnet' ]; then
+              echo -n '${{ secrets.PROGRAM_KEYPAIR_DEVNET }}' > "$PROGRAM_KEYPAIR_FILE"
+              export TYPE='dev'
+          else
+              echo -n '${{ secrets.PROGRAM_KEYPAIR_MAIN }}' > "$PROGRAM_KEYPAIR_FILE"
+              export TYPE='main'
+          fi
+          echo -n '${{ secrets.KEYPAIR }}' > "$KEYPAIR_FILE"
           ./scripts/deploy.sh
         env:
-          PROGRAM_ID: 'EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud'
           CLUSTER: ${{ inputs.cluster }}
           VERSION: ${{ inputs.version }}
           KEYPAIR_FILE: /tmp/keypair.json
+          PROGRAM_KEYPAIR_FILE: /tmp/program-keypair.json
           GH_TOKEN: ${{ github.token }}
 
       # always remove the temp file
       - name: Clean up
         if: always()
-        run: rm -f /tmp/keypair.json
+        run: rm -f /tmp/keypair.json /tmp/program-keypair.json

@@ -70,10 +70,12 @@ upgrade-version: # integration-tests go-bindings
 	@./scripts/upgrade-version.sh $(VERSION)
 
 
+TEST_VERSION := latest
 .PHONY: test-deployment
 test-deployment:
-	export PROGRAM_ID=EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud; \
+	export PROGRAM_KEYPAIR_FILE=./keypairs/polymer_prover-keypair.devnet.json; \
 	export CLUSTER=localhost; \
-	export VERSION=latest; \
+	export VERSION=$(TEST_VERSION); \
+	export TYPE=dev; \
 	export KEYPAIR_FILE=~/.config/solana/id.json; \
 	./scripts/deploy.sh
