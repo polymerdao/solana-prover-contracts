@@ -6,12 +6,16 @@ set -eo pipefail
 ROOT="$(realpath "$(dirname "$(realpath "$0")")"/..)"
 
 check_env() {
-	if [ -z "$PROGRAM_ID" ]; then
-		echo "PROGRAM_ID env variable is not set" >&2
+	if [ -z "$PROGRAM_KEYPAIR_FILE" ]; then
+		echo "PROGRAM_KEYPAIR_FILE env variable is not set" >&2
 		exit 1
 	fi
 	if [ -z "$CLUSTER" ]; then
 		echo "CLUSTER env variable is not set" >&2
+		exit 1
+	fi
+	if [ -z "$TYPE" ]; then
+		echo "TYPE env variable is not set" >&2
 		exit 1
 	fi
 	if [ -z "$VERSION" ]; then
@@ -45,21 +49,24 @@ main() {
 	# this errors out if the $tag is not found causing the script to fail
 	gh release download "$tag" \
 		--repo polymerdao/solana-prover-contracts \
-		--pattern polymer_prover.so \
+		--pattern 'polymer_prover.*.so' \
 		--clobber \
-		--output polymer_prover.so
+		--dir "$ROOT/release"
 
-	if ! solana program show "$PROGRAM_ID" &>/dev/null; then
-		# program does not exist in the cluster, deploy it for the first time. For which we need the
-		# program keypair instead of the program id
-		echo "> deploying program '$PROGRAM_ID' to cluster '$CLUSTER' for the first time"
-		PROGRAM_ID="$ROOT/keypair/polymer_prover-keypair.json"
+	so_file="$ROOT/release/polymer_prover.${TYPE}.so"
+
+	# Fail early if the artifact wasn’t found
+	if [ ! -f "$so_file" ]; then
+		echo "artefact '$so_file' not found; did the build for TYPE='$TYPE' succeed?" >&2
+		exit 1
 	fi
+
+	echo "> deploying '$so_file' to '$CLUSTER'"
 
 	# finally, deploy the program
 	solana program deploy \
-		./polymer_prover.so \
-		--program-id "$PROGRAM_ID" \
+		"$so_file" \
+		--program-id "$PROGRAM_KEYPAIR_FILE" \
 		--commitment confirmed \
 		--verbose
 }
