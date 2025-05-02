@@ -34,8 +34,13 @@ main() {
 	# install the solana sdk
 	. "$ROOT/scripts/solana.sh"
 
+	# testnet is really devnet
+	local cluster="$CLUSTER"
+	if [ "$cluster" = 'testnet' ]; then
+		cluster='devnet'
+	fi
 	# this takes care of checking if the cluster is valid
-	solana config set --url "$CLUSTER"
+	solana config set --url "$cluster"
 
 	solana config set --keypair "$KEYPAIR_FILE"
 
