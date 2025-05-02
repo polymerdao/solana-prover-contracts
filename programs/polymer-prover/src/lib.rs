@@ -13,7 +13,7 @@ use instructions::*;
 
 const DISCRIMINATOR_SIZE: usize = 8;
 
-declare_id!("EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud");
+declare_id!("FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3");
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
