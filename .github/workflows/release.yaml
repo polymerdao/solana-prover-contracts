@@ -26,8 +26,7 @@ jobs:
         uses: ./.github/actions/build
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          PROGRAM_KEYPAIR_DEVNET: ${{ secrets.PROGRAM_KEYPAIR_DEVNET }}
-          PROGRAM_KEYPAIR_MAIN: ${{ secrets.PROGRAM_KEYPAIR_MAIN }}
+        secrets: inherit
 
       - name: Save compiled program
         if: success()
