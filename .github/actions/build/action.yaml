@@ -5,10 +5,10 @@ inputs:
   token:
     description: 'github token to update the git config and allow accessing private repos'
     required: true
-    program_keypair_devnet:
-      required: false
-    program_keypair_main:
-      required: false
+  program_keypair_devnet:
+    required: false
+  program_keypair_main:
+    required: false
 
 runs:
   using: "composite"
