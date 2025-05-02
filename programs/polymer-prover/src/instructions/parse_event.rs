@@ -14,7 +14,11 @@ impl EthAddress {
     /// Converts a hex string (with or without "0x" prefix) into an EthAddress.
     pub fn from_hex(str: &str) -> Self {
         let mut addr = [0u8; 20];
-        let _ = hex::decode_to_slice(str.trim_start_matches("0x"), &mut addr as &mut [u8]);
+        if let Ok(src) = hex::decode(str.trim_start_matches("0x")) {
+            let len = std::cmp::min(addr.len(), src.len());
+            let start = addr.len() - len;
+            addr[start..].copy_from_slice(&src[src.len() - len..]);
+        }
         EthAddress(addr)
     }
 
@@ -46,4 +50,23 @@ pub fn handler(raw_event: &[u8], num_topics: usize) -> EthEvent {
     }
 }
 
-// TODO add test to verify the from_bytes() function behaves like go's common.BytesToAddress()
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eth_addresses() {
+        assert_eq!(
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10],
+            EthAddress::from_hex("0x0a0a").as_bytes()
+        );
+        assert_eq!(
+            vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10],
+            EthAddress::from_hex("0a0a").as_bytes()
+        );
+        assert_eq!(
+            vec![159, 99, 128, 50, 200, 184, 182, 79, 135, 255, 216, 54, 205, 130, 125, 239, 250, 102, 20, 209,],
+            EthAddress::from_hex("0x9f638032c8b8b64f87ffd836cd827deffa6614d1").as_bytes()
+        )
+    }
+}
