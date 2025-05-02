@@ -31,7 +31,7 @@ describe("localnet", () => {
   const proof = readProofFile('op-proof-small.hex')
 
   const clientType = "proof_api";
-  const signerAddress = Array.from(Buffer.from('8D3921B96A3815F403Fb3a4c7fF525969d16f9E0', 'hex'));
+  const signerAddress = Buffer.from('8D3921B96A3815F403Fb3a4c7fF525969d16f9E0', 'hex');
   const peptideChainId = new anchor.BN(901);
 
   before(async () => {
@@ -40,24 +40,21 @@ describe("localnet", () => {
     console.log(`CPI CLIENT ID:     ${cpiclient.programId}`)
     console.log(`MARS ID:           ${mars.programId}`)
 
-    const signature = await program.methods.initialize(clientType, signerAddress, peptideChainId)
-      .accounts({ authority: wallet.publicKey })
-      .signers([wallet.payer])
-      .rpc(confirmOptions);
-
-    const tx = await provider.connection.getTransaction(signature, {
-      maxSupportedTransactionVersion: 0,
-      commitment: "confirmed",
-    });
-
-    console.log(tx.meta.logMessages)
+    const output = runProverCtl(
+      '--keypair', bs58.encode(wallet.payer.secretKey),
+      'initialize',
+      '--signer-addr', signerAddress.toString('hex'),
+      '--client-type', 'proof_api',
+      '--peptide-chain-id', peptideChainId.toString(),
+    )
+    assert.ok(output.includes('Instruction: Initialize'))
   })
 
   it("internal accounts are set after init", async () => {
     const pda = findProgramAddress([Buffer.from("internal")], program.programId);
     const account = await program.account.internalAccount.fetch(pda);
     assert.equal(account.clientType, clientType)
-    assert.deepEqual(account.signerAddr, signerAddress)
+    assert.deepEqual(account.signerAddr, Array.from(signerAddress))
     assert.equal(account.peptideChainId.toNumber(), peptideChainId.toNumber())
   });
 

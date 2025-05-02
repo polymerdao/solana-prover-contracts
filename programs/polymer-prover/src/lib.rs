@@ -139,6 +139,8 @@ pub mod polymer_prover {
 
     use instructions::validate_event::ValidateEventResult;
 
+    use crate::instructions::parse_event::EthAddress;
+
     use super::*;
 
     #[event]
@@ -165,6 +167,12 @@ pub mod polymer_prover {
         internal.signer_addr = signer_addr;
         internal.peptide_chain_id = peptide_chain_id;
 
+        msg!("client_type: {}", internal.client_type);
+        msg!("peptide_chain_id: {}", internal.peptide_chain_id);
+        msg!(
+            "signer_addr: {}",
+            EthAddress::from_bytes(&internal.signer_addr).to_hex()
+        );
         Ok(())
     }
 

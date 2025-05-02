@@ -1,7 +1,10 @@
 use anchor_lang::InstructionData;
 use anyhow::{Ok, Result};
 use log::{info, warn};
-use polymer_prover::instruction::{ClearProofCache, ResizeProofCache};
+use polymer_prover::{
+    instruction::{ClearProofCache, Initialize, ResizeProofCache},
+    instructions::parse_event::EthAddress,
+};
 use retry::{delay::Fixed, retry, OperationResult};
 use solana_client::{rpc_client::RpcClient, rpc_config::*};
 use solana_sdk::{
@@ -31,6 +34,28 @@ impl Client {
             payer,
             client,
         })
+    }
+
+    pub fn send_initialize(&self, client_type: &String, signer_addr: &String, peptide_chain_id: u64) -> Result<()> {
+        let data = polymer_prover::instruction::Initialize {
+            client_type: client_type.to_string(),
+            signer_addr: EthAddress::from_hex(signer_addr.as_str()).as_bytes().clone(),
+            peptide_chain_id,
+        };
+        let (internal_account, _) = Pubkey::find_program_address(&[b"internal"], &self.program_id);
+        let instruction = Instruction {
+            program_id: self.program_id,
+            data: Initialize::data(&data),
+            accounts: vec![
+                AccountMeta::new(internal_account, false),
+                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
+            ],
+        };
+
+        let tx = self.send_tx(instruction)?;
+        self.show_tx_logs(tx);
+        Ok(())
     }
 
     pub fn send_resize_cache(&self) -> Result<()> {
