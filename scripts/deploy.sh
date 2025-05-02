@@ -2,11 +2,6 @@
 
 set -eo pipefail
 
-KEYPAIR_FILE="$(mktemp)"
-
-# always remove the keypair to avoid leaks
-trap 'rm -rf $KEYPAIR_FILE' EXIT
-
 # use this so the script can be run from anywhere
 ROOT="$(realpath "$(dirname "$(realpath "$0")")"/..)"
 
@@ -23,8 +18,8 @@ check_env() {
 		echo "VERSION env variable is not set" >&2
 		exit 1
 	fi
-	if [ -z "$KEYPAIR" ]; then
-		echo "KEYPAIR env variable is not set" >&2
+	if [ -z "$KEYPAIR_FILE" ]; then
+		echo "KEYPAIR_FILE env variable is not set" >&2
 		exit 1
 	fi
 }
@@ -38,7 +33,6 @@ main() {
 	# this takes care of checking if the cluster is valid
 	solana config set --url "$CLUSTER"
 
-	echo -n "$KEYPAIR" >"$KEYPAIR_FILE"
 	solana config set --keypair "$KEYPAIR_FILE"
 
 	# the release downloader fetches the latest release by default but the tag must be empty
