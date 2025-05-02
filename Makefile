@@ -68,3 +68,12 @@ VERSION :=
 upgrade-version: # integration-tests go-bindings
 	@if [[ "$(VERSION)" == "" ]]; then echo "\n  usage: make upgrade-version VERSION=x.x.x\n"; exit 1; fi
 	@./scripts/upgrade-version.sh $(VERSION)
+
+
+.PHONY: test-deployment
+test-deployment:
+	export PROGRAM_ID=EXGGs3bzSWA8hKzLuEztDYYCx5RdEuZF3o4pmbfpQPud; \
+	export CLUSTER=localhost; \
+	export VERSION=latest; \
+	export KEYPAIR_FILE=~/.config/solana/id.json; \
+	./scripts/deploy.sh
