@@ -41,6 +41,16 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    Initialize {
+        #[arg(long)]
+        client_type: String,
+
+        #[arg(long)]
+        signer_addr: String,
+
+        #[arg(long)]
+        peptide_chain_id: u64,
+    },
     ClearCache,
     ResizeCache,
 }
@@ -61,6 +71,11 @@ fn main() -> Result<()> {
 
     let client = Client::new(cli.program_id, signer, &cli.cluster)?;
     match &cli.command {
+        Commands::Initialize {
+            client_type,
+            signer_addr,
+            peptide_chain_id,
+        } => client.send_initialize(client_type, signer_addr, *peptide_chain_id)?,
         Commands::ResizeCache => client.send_resize_cache()?,
         Commands::ClearCache => client.send_clear_cache()?,
     }
