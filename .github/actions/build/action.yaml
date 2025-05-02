@@ -68,6 +68,6 @@ runs:
         ./scripts/ci.sh
         # since it's a bit of a pain to set up the toolchain, let's try to reuse it to build the "release" artefacts
         if [ -n '${{ inputs.release }}' ]; then
-          PROGRAM_KEYPAIR=${{ secrets.PROGRAM_KEYPAIR_DEVNET }} TYPE=dev  ./scripts/build-release.sh
-          PROGRAM_KEYPAIR=${{ secrets.PROGRAM_KEYPAIR_MAIN }}   TYPE=main ./scripts/build-release.sh
+          PROGRAM_KEYPAIR='${{ secrets.PROGRAM_KEYPAIR_DEVNET }}' TYPE=dev  ./scripts/build-release.sh
+          PROGRAM_KEYPAIR='${{ secrets.PROGRAM_KEYPAIR_MAIN }}'   TYPE=main ./scripts/build-release.sh
         fi
