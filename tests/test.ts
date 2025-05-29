@@ -28,7 +28,7 @@ describe("localnet", () => {
   const wallet = provider.wallet as anchor.Wallet;
   const confirmOptions: ConfirmOptions = { commitment: "confirmed" };
   const testDataPath = 'programs/polymer-prover/src/instructions/test-data';
-  const proof = readProofFile('op-proof-small.hex')
+  const proof = readProofFile('op-proof-v2.hex')
 
   const clientType = "proof_api";
   const signerAddress = Buffer.from('8D3921B96A3815F403Fb3a4c7fF525969d16f9E0', 'hex');
@@ -129,7 +129,7 @@ describe("localnet", () => {
 
     txs.forEach((t) => console.log(t.meta.logMessages))
 
-    checkValidatEventResult(84_532, 'op-event-small.json', ...txs)
+    checkValidatEventResult(11_155_420, 'op-event-v2.json', ...txs)
   });
 
 
@@ -221,8 +221,8 @@ describe("localnet", () => {
 
     txs.forEach((t) => console.log(t.meta.logMessages))
 
-    checkValidatEventResult(84_532, 'op-event-small.json', txs.at(-2))
-    checkValidatEventResult(84_532, 'op-event-small.json', txs.at(-1))
+    checkValidatEventResult(11_155_420, 'op-event-v2.json', txs.at(-2))
+    checkValidatEventResult(11_155_420, 'op-event-v2.json', txs.at(-1))
   });
 
   // calls validate event with invalid input, causing the cache to be cleared and then calls it again with
@@ -279,7 +279,7 @@ describe("localnet", () => {
     });
 
     txs.forEach((t) => console.log(t.meta.logMessages))
-    checkValidatEventResult(84_532, 'op-event-small.json', ...txs)
+    checkValidatEventResult(11_155_420, 'op-event-v2.json', ...txs)
   });
 
 
@@ -436,7 +436,7 @@ describe("localnet", () => {
 
     assert.ok(findLogMessage("proof is valid", tx))
     assert.ok(findLogMessage(
-      "proof validated: chain_id: 84532, emitting_contract: 0x30a0155082629940d4bd9cd41d6ef90876a0f1b5", tx
+      "proof validated: chain_id: 11155420, emitting_contract: 0xf221750e52aa080835d2957f2eed0d5d7ddd8c38", tx
     ))
   })
 
