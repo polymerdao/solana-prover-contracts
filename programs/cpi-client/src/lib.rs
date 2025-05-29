@@ -58,7 +58,7 @@ pub mod cpi_client {
     use polymer_prover::instructions::validate_event::ValidateEventResult;
 
     // load the proof here for simplicity
-    const PROOF_HEX: &str = include_str!("../../polymer-prover/src/instructions/test-data/op-proof-small.hex");
+    const PROOF_HEX: &str = include_str!("../../polymer-prover/src/instructions/test-data/op-proof-v2.hex");
 
     /// calls load_proof on the polymer_prover program with a pre-loaded proof
     pub fn call_load_proof(ctx: Context<CallLoadProof>) -> Result<()> {

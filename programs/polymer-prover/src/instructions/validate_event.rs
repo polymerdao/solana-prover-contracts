@@ -61,11 +61,11 @@ pub fn handler(
 ) -> ValidateEventResult {
     // first, check there's enough data to read the event_end index
     let proof_len = proof.len();
-    if proof_len < 123 {
-        return ValidateEventResult::InvalidProof(proof_len, 123);
+    if proof_len < 128 {
+        return ValidateEventResult::InvalidProof(proof_len, 128);
     }
 
-    let event_end: usize = u16::from_be_bytes(<[u8; 2]>::try_from(&proof[121..123]).unwrap()).into();
+    let event_end: usize = u16::from_be_bytes(<[u8; 2]>::try_from(&proof[126..128]).unwrap()).into();
 
     // now, make sure we have enough data to read until the event ends. After it, we have the
     // membership proof, which will be checked later
@@ -97,13 +97,13 @@ pub fn handler(
         chain_id,
         client_type,
         u64::from_be_bytes(<[u8; 8]>::try_from(&proof[109..117]).unwrap()),
-        u16::from_be_bytes(<[u8; 2]>::try_from(&proof[117..119]).unwrap()),
-        proof[119],
+        u32::from_be_bytes(<[u8; 4]>::try_from(&proof[117..121]).unwrap()),
+        u32::from_be_bytes(<[u8; 4]>::try_from(&proof[121..125]).unwrap()),
     );
 
     let value = {
         let mut hasher = keccak::Hasher::default();
-        hasher.hash(&proof[123..event_end]);
+        hasher.hash(&proof[128..event_end]);
         hasher.result()
     };
 
@@ -111,8 +111,8 @@ pub fn handler(
         return err;
     }
 
-    let raw_event = &proof[123..event_end];
-    let num_topics: usize = proof[120].into();
+    let raw_event = &proof[128..event_end];
+    let num_topics: usize = proof[125].into();
 
     let eth_event = parse_event::handler(raw_event, num_topics);
 
@@ -253,9 +253,9 @@ mod tests {
     }
 
     fn setup() -> TestContext {
-        let proof = read_and_decode_proof_file("src/instructions/test-data/op-proof-large.hex")
+        let proof = read_and_decode_proof_file("src/instructions/test-data/op-proof-v2.hex")
             .expect("could not read proof file");
-        let event = read_and_decode_event_file("src/instructions/test-data/op-event-large.json")
+        let event = read_and_decode_event_file("src/instructions/test-data/op-event-v2.json")
             .expect("could not read event file");
 
         TestContext {
@@ -271,16 +271,13 @@ mod tests {
     fn test_validate_proof_in_one_chunk() {
         let t = setup();
         let result = handler(&t.proof, &t.client_type, t.signer.as_bytes(), t.peptide_chain_id);
-        validate_result(t, result);
-    }
 
-    fn validate_result(t: TestContext, result: ValidateEventResult) {
         let (chain_id, event) = match result {
             ValidateEventResult::Valid(n, t) => (n, t),
             _ => panic!("expected valid proof"),
         };
 
-        assert_eq!(84_532, chain_id);
+        assert_eq!(11_155_420, chain_id);
         let mut topics: Vec<u8> = Vec::new();
         t.event
             .topics
@@ -314,7 +311,7 @@ mod tests {
         let mut t = setup();
 
         // flip a bit where the signature lives to force recovering a different signer address
-        t.proof[33] ^= 1;
+        t.proof[35] ^= 1;
         let result = handler(&t.proof, &t.client_type, t.signer.as_bytes(), t.peptide_chain_id);
         println!("result: {}", result);
         assert!(matches!(result, ValidateEventResult::RecoveredInvalidSignerAddress(_)));
@@ -325,7 +322,7 @@ mod tests {
         let mut t = setup();
 
         // flip a bit where the membership proof key lives to force an invalid state root error
-        t.proof[119] ^= 1;
+        t.proof[120] ^= 1;
         let result = handler(&t.proof, &t.client_type, t.signer.as_bytes(), t.peptide_chain_id);
         println!("result: {}", result);
         assert!(matches!(result, ValidateEventResult::InvalidStateRoot(_)));
