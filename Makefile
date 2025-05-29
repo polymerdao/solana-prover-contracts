@@ -42,12 +42,13 @@ go-bindings: build
 	go mod tidy && \
 	go test ./... -count=1
 
-# for now we need to install our own fork of solana-anchor-go because theirs is broken. See diff for against
-# upstream for the fixes we needed to put in place
+
+# install solana-anchor-go from a specific commit that includes our fixes
 .PHONY: install-solana-anchor-go
 install-solana-anchor-go:
-	git clone --branch v0.0.1 --depth 1 --quiet https://github.com/polymerdao/solana-anchor-go /tmp/$@ && \
+	git clone --depth 1 --quiet https://github.com/fragmetric-labs/solana-anchor-go /tmp/$@ && \
 	cd /tmp/$@ && \
+	git checkout 2f389641e && \
 	go install . && \
 	rm -rf /tmp/$@ && \
 	echo 'solana-anchor-go has been installed!'
