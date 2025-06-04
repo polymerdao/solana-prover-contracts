@@ -360,23 +360,6 @@ describe("localnet", () => {
   })
 
 
-  // in order to fully test this we'd have to deploy a program with an initial max size (ie 100B, then change it
-  // something else (ie 200) and redeploy the program
-  it("resizes cache", async () => {
-    const newSigner = await generateAndFundNewSigner()
-    await program.methods
-      .loadProof(proof.subarray(0, 600))
-      .accounts({ authority: newSigner.publicKey })
-      .signers([newSigner])
-      .rpc(confirmOptions)
-
-    await program.methods
-      .resizeProofCache()
-      .accounts({ authority: newSigner.publicKey })
-      .signers([newSigner])
-      .rpc(confirmOptions)
-  })
-
   it("runs proverctl", async () => {
     const newSigner = await generateAndFundNewSigner()
 
@@ -398,9 +381,6 @@ describe("localnet", () => {
     // confirm the cache has been cleared
     const cache2 = await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
     assert.equal(0, cache2.cache.length)
-
-    const resizeCacheOuput = runProverCtl('--keypair', bs58.encode(newSigner.secretKey), 'resize-cache')
-    assert.ok(resizeCacheOuput.includes('proof cache successfully resized'))
   })
 
   it("support cpi calls", async () => {

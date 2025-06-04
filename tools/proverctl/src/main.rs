@@ -52,7 +52,6 @@ enum Commands {
         peptide_chain_id: u64,
     },
     ClearCache,
-    ResizeCache,
 }
 
 fn main() -> Result<()> {
@@ -76,7 +75,6 @@ fn main() -> Result<()> {
             signer_addr,
             peptide_chain_id,
         } => client.send_initialize(client_type, signer_addr, *peptide_chain_id)?,
-        Commands::ResizeCache => client.send_resize_cache()?,
         Commands::ClearCache => client.send_clear_cache()?,
     }
 
