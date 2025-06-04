@@ -34,8 +34,6 @@ var (
 
 	Instruction_LoadProof = ag_binary.TypeID([8]byte{34, 145, 85, 9, 72, 98, 17, 92})
 
-	Instruction_ResizeProofCache = ag_binary.TypeID([8]byte{140, 29, 53, 98, 103, 152, 83, 87})
-
 	Instruction_ValidateEvent = ag_binary.TypeID([8]byte{66, 249, 207, 221, 30, 87, 27, 129})
 )
 
@@ -48,8 +46,6 @@ func InstructionIDToName(id ag_binary.TypeID) string {
 		return "Initialize"
 	case Instruction_LoadProof:
 		return "LoadProof"
-	case Instruction_ResizeProofCache:
-		return "ResizeProofCache"
 	case Instruction_ValidateEvent:
 		return "ValidateEvent"
 	default:
@@ -80,9 +76,6 @@ var InstructionImplDef = ag_binary.NewVariantDefinition(
 		},
 		{
 			Name: "load_proof", Type: (*LoadProofInstruction)(nil),
-		},
-		{
-			Name: "resize_proof_cache", Type: (*ResizeProofCacheInstruction)(nil),
 		},
 		{
 			Name: "validate_event", Type: (*ValidateEventInstruction)(nil),
