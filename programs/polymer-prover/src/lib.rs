@@ -102,23 +102,6 @@ pub struct LoadProof<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ResizeProofCache<'info> {
-    #[account(
-        mut ,
-        realloc = DISCRIMINATOR_SIZE + ProofCacheAccount::INIT_SPACE,
-        realloc::payer = authority,
-        realloc::zero = false,
-        seeds = [authority.key().as_ref()],
-        bump,
-    )]
-    pub cache_account: Account<'info, ProofCacheAccount>,
-    #[account(mut, signer)]
-    pub authority: Signer<'info>,
-    // need this to mutate the pda account
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
 pub struct ClearProofCache<'info> {
     #[account(
         mut ,
@@ -173,11 +156,6 @@ pub mod polymer_prover {
             "signer_addr: {}",
             EthAddress::from_bytes(&internal.signer_addr).to_hex()
         );
-        Ok(())
-    }
-
-    pub fn resize_proof_cache(_ctx: Context<ResizeProofCache>) -> Result<()> {
-        msg!("proof cache successfully resized");
         Ok(())
     }
 

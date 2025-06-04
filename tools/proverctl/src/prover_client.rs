@@ -2,7 +2,7 @@ use anchor_lang::InstructionData;
 use anyhow::{Ok, Result};
 use log::{info, warn};
 use polymer_prover::{
-    instruction::{ClearProofCache, Initialize, ResizeProofCache},
+    instruction::{ClearProofCache, Initialize},
     instructions::parse_event::EthAddress,
 };
 use retry::{delay::Fixed, retry, OperationResult};
@@ -48,23 +48,6 @@ impl Client {
             data: Initialize::data(&data),
             accounts: vec![
                 AccountMeta::new(internal_account, false),
-                AccountMeta::new(self.payer.pubkey(), true),
-                AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
-            ],
-        };
-
-        let tx = self.send_tx(instruction)?;
-        self.show_tx_logs(tx);
-        Ok(())
-    }
-
-    pub fn send_resize_cache(&self) -> Result<()> {
-        let cache_account = self.find_cache_account();
-        let instruction = Instruction {
-            program_id: self.program_id,
-            data: ResizeProofCache.data(),
-            accounts: vec![
-                AccountMeta::new(cache_account, false),
                 AccountMeta::new(self.payer.pubkey(), true),
                 AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             ],
