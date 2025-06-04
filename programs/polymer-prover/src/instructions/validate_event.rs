@@ -141,6 +141,13 @@ fn recover_signature(
         hasher.result()
     };
 
+    // prevent signature malleability by checking the 's' value
+    // https://docs.rs/solana-secp256k1-program/2.1.0/solana_secp256k1_program/#signature-malleability
+    let sig = libsecp256k1::Signature::parse_standard_slice(signature).map_err(|e| e.to_string())?;
+    if sig.s.is_high() {
+        return Err("Invalid signature: 's' value is too high".to_string());
+    };
+
     match secp256k1_recover(&hash.0, recovery_id - 27, signature) {
         Ok(recovered_pubkey) => {
             let recovered_address_hash = Keccak256::digest(recovered_pubkey.to_bytes());
