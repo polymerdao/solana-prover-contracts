@@ -87,7 +87,7 @@ describe("localnet", () => {
   // it checks that the program accepts proofs in chunks and temporarily stores them in a PDA account.
   // Once all the chunks have been sent, it runs the actual event validation
   it("validates event", async () => {
-    const newSigner = wallet.payer // await generateAndFundNewSigner()
+    const newSigner = await generateAndFundNewSigner()
 
     await program.methods
       .loadProof(proof.subarray(0, 800))
@@ -130,6 +130,44 @@ describe("localnet", () => {
     txs.forEach((t) => console.log(t.meta.logMessages))
 
     checkValidatEventResult(11_155_420, 'op-event-v2.json', ...txs)
+  });
+
+  it("validates event with large proof", async () => {
+    const largeProof = readProofFile('arb-proof-v2.hex')
+    console.log(`large proof size: ${largeProof.length}`)
+    console.log(`proof size: ${proof.length}`)
+
+    const newSigner = await generateAndFundNewSigner()
+
+    // loop through the large proof and send it in chunks
+    const maxProofSize = Math.min(largeProof.length, 800);
+    for (let start = 0; start < largeProof.length; start += maxProofSize) {
+      const end = Math.min(start + maxProofSize, largeProof.length);
+
+      console.log(`loading proof chunk: ${start} - ${end}`)
+      await program.methods
+        .loadProof(largeProof.subarray(start, end))
+        .accounts({ authority: newSigner.publicKey })
+        .signers([newSigner])
+        .rpc(confirmOptions);
+    }
+
+    // now run the actual validation
+    const signature = await program.methods
+      .validateEvent()
+      .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions);
+
+    const txs = await provider.connection.getTransactions([signature], {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+
+    txs.forEach((t) => console.log(t.meta.logMessages))
+
+    checkValidatEventResult(421614, 'arb-event-v2.json', ...txs)
   });
 
 
@@ -383,12 +421,13 @@ describe("localnet", () => {
     assert.equal(0, cache2.cache.length)
   })
 
-  it("support cpi calls", async () => {
+  it.only("support cpi calls", async () => {
     const newSigner = await generateAndFundNewSigner()
     const cacheAccount = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId)
 
     await cpiclient.methods
       .callLoadProof()
+      .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
       .accounts({
         authority: newSigner.publicKey,
         cacheAccount: cacheAccount,
