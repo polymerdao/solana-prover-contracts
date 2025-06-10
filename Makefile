@@ -46,9 +46,8 @@ go-bindings: build
 # install solana-anchor-go from a specific commit that includes our fixes
 .PHONY: install-solana-anchor-go
 install-solana-anchor-go:
-	git clone --depth 1 --quiet https://github.com/fragmetric-labs/solana-anchor-go /tmp/$@ && \
+	git clone --branch v1.1.0 --depth 1 --quiet https://github.com/fragmetric-labs/solana-anchor-go /tmp/$@ && \
 	cd /tmp/$@ && \
-	git checkout 2f389641e && \
 	go install . && \
 	rm -rf /tmp/$@ && \
 	echo 'solana-anchor-go has been installed!'

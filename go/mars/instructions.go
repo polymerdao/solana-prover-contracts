@@ -61,10 +61,10 @@ var InstructionImplDef = ag_binary.NewVariantDefinition(
 	ag_binary.AnchorTypeIDEncoding,
 	[]ag_binary.VariantType{
 		{
-			Name: "initialize", Type: (*Initialize)(nil),
+			Name: "initialize", Type: (*InitializeInstruction)(nil),
 		},
 		{
-			Name: "set_data", Type: (*SetData)(nil),
+			Name: "set_data", Type: (*SetDataInstruction)(nil),
 		},
 	},
 )

@@ -15,13 +15,13 @@ func TestEncodeDecode_ClearProofCache(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		t.Run("ClearProofCache"+strconv.Itoa(i), func(t *testing.T) {
 			{
-				params := new(ClearProofCache)
+				params := new(ClearProofCacheInstruction)
 				fu.Fuzz(params)
 				params.AccountMetaSlice = nil
 				buf := new(bytes.Buffer)
 				err := encodeT(*params, buf)
 				ag_require.NoError(t, err)
-				got := new(ClearProofCache)
+				got := new(ClearProofCacheInstruction)
 				err = decodeT(got, buf.Bytes())
 				got.AccountMetaSlice = nil
 				ag_require.NoError(t, err)

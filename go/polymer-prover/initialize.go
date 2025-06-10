@@ -11,7 +11,7 @@ import (
 )
 
 // Initialize is the `initialize` instruction.
-type Initialize struct {
+type InitializeInstruction struct {
 	ClientType     *string
 	SignerAddr     *[20]uint8
 	PeptideChainId *uint64
@@ -24,9 +24,9 @@ type Initialize struct {
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
-// NewInitializeInstructionBuilder creates a new `Initialize` instruction builder.
-func NewInitializeInstructionBuilder() *Initialize {
-	nd := &Initialize{
+// NewInitializeInstructionBuilder creates a new `InitializeInstruction` instruction builder.
+func NewInitializeInstructionBuilder() *InitializeInstruction {
+	nd := &InitializeInstruction{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
 	}
 	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
@@ -34,30 +34,30 @@ func NewInitializeInstructionBuilder() *Initialize {
 }
 
 // SetClientType sets the "client_type" parameter.
-func (inst *Initialize) SetClientType(client_type string) *Initialize {
+func (inst *InitializeInstruction) SetClientType(client_type string) *InitializeInstruction {
 	inst.ClientType = &client_type
 	return inst
 }
 
 // SetSignerAddr sets the "signer_addr" parameter.
-func (inst *Initialize) SetSignerAddr(signer_addr [20]uint8) *Initialize {
+func (inst *InitializeInstruction) SetSignerAddr(signer_addr [20]uint8) *InitializeInstruction {
 	inst.SignerAddr = &signer_addr
 	return inst
 }
 
 // SetPeptideChainId sets the "peptide_chain_id" parameter.
-func (inst *Initialize) SetPeptideChainId(peptide_chain_id uint64) *Initialize {
+func (inst *InitializeInstruction) SetPeptideChainId(peptide_chain_id uint64) *InitializeInstruction {
 	inst.PeptideChainId = &peptide_chain_id
 	return inst
 }
 
 // SetInternalAccount sets the "internal" account.
-func (inst *Initialize) SetInternalAccount(internal ag_solanago.PublicKey) *Initialize {
+func (inst *InitializeInstruction) SetInternalAccount(internal ag_solanago.PublicKey) *InitializeInstruction {
 	inst.AccountMetaSlice[0] = ag_solanago.Meta(internal).WRITE()
 	return inst
 }
 
-func (inst *Initialize) findFindInternalAddress(knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *InitializeInstruction) findFindInternalAddress(knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// const: internal
 	seeds = append(seeds, []byte{byte(0x69), byte(0x6e), byte(0x74), byte(0x65), byte(0x72), byte(0x6e), byte(0x61), byte(0x6c)})
@@ -72,12 +72,12 @@ func (inst *Initialize) findFindInternalAddress(knownBumpSeed uint8) (pda ag_sol
 }
 
 // FindInternalAddressWithBumpSeed calculates Internal account address with given seeds and a known bump seed.
-func (inst *Initialize) FindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+func (inst *InitializeInstruction) FindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
 	pda, _, err = inst.findFindInternalAddress(bumpSeed)
 	return
 }
 
-func (inst *Initialize) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey) {
+func (inst *InitializeInstruction) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindInternalAddress(bumpSeed)
 	if err != nil {
 		panic(err)
@@ -86,12 +86,12 @@ func (inst *Initialize) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (pda
 }
 
 // FindInternalAddress finds Internal account address with given seeds.
-func (inst *Initialize) FindInternalAddress() (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *InitializeInstruction) FindInternalAddress() (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	pda, bumpSeed, err = inst.findFindInternalAddress(0)
 	return
 }
 
-func (inst *Initialize) MustFindInternalAddress() (pda ag_solanago.PublicKey) {
+func (inst *InitializeInstruction) MustFindInternalAddress() (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindInternalAddress(0)
 	if err != nil {
 		panic(err)
@@ -100,33 +100,33 @@ func (inst *Initialize) MustFindInternalAddress() (pda ag_solanago.PublicKey) {
 }
 
 // GetInternalAccount gets the "internal" account.
-func (inst *Initialize) GetInternalAccount() *ag_solanago.AccountMeta {
+func (inst *InitializeInstruction) GetInternalAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
 }
 
 // SetAuthorityAccount sets the "authority" account.
-func (inst *Initialize) SetAuthorityAccount(authority ag_solanago.PublicKey) *Initialize {
+func (inst *InitializeInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *InitializeInstruction {
 	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
 	return inst
 }
 
 // GetAuthorityAccount gets the "authority" account.
-func (inst *Initialize) GetAuthorityAccount() *ag_solanago.AccountMeta {
+func (inst *InitializeInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
 // SetSystemProgramAccount sets the "system_program" account.
-func (inst *Initialize) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *Initialize {
+func (inst *InitializeInstruction) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *InitializeInstruction {
 	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
 	return inst
 }
 
 // GetSystemProgramAccount gets the "system_program" account.
-func (inst *Initialize) GetSystemProgramAccount() *ag_solanago.AccountMeta {
+func (inst *InitializeInstruction) GetSystemProgramAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(2)
 }
 
-func (inst Initialize) Build() *Instruction {
+func (inst InitializeInstruction) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
 		TypeID: Instruction_Initialize,
@@ -136,14 +136,14 @@ func (inst Initialize) Build() *Instruction {
 // ValidateAndBuild validates the instruction parameters and accounts;
 // if there is a validation error, it returns the error.
 // Otherwise, it builds and returns the instruction.
-func (inst Initialize) ValidateAndBuild() (*Instruction, error) {
+func (inst InitializeInstruction) ValidateAndBuild() (*Instruction, error) {
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}
 	return inst.Build(), nil
 }
 
-func (inst *Initialize) Validate() error {
+func (inst *InitializeInstruction) Validate() error {
 	// Check whether all (required) parameters are set:
 	{
 		if inst.ClientType == nil {
@@ -172,7 +172,7 @@ func (inst *Initialize) Validate() error {
 	return nil
 }
 
-func (inst *Initialize) EncodeToTree(parent ag_treeout.Branches) {
+func (inst *InitializeInstruction) EncodeToTree(parent ag_treeout.Branches) {
 	parent.Child(ag_format.Program(ProgramName, ProgramID)).
 		//
 		ParentFunc(func(programBranch ag_treeout.Branches) {
@@ -197,7 +197,7 @@ func (inst *Initialize) EncodeToTree(parent ag_treeout.Branches) {
 		})
 }
 
-func (obj Initialize) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj InitializeInstruction) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `ClientType` param:
 	err = encoder.Encode(obj.ClientType)
 	if err != nil {
@@ -215,7 +215,7 @@ func (obj Initialize) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error)
 	}
 	return nil
 }
-func (obj *Initialize) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *InitializeInstruction) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `ClientType`:
 	err = decoder.Decode(&obj.ClientType)
 	if err != nil {
@@ -243,7 +243,7 @@ func NewInitializeInstruction(
 	// Accounts:
 	internal ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
-	systemProgram ag_solanago.PublicKey) *Initialize {
+	systemProgram ag_solanago.PublicKey) *InitializeInstruction {
 	return NewInitializeInstructionBuilder().
 		SetClientType(client_type).
 		SetSignerAddr(signer_addr).

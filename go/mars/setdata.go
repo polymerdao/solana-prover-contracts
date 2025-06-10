@@ -11,39 +11,39 @@ import (
 )
 
 // SetData is the `set_data` instruction.
-type SetData struct {
+type SetDataInstruction struct {
 	Data *Data
 
 	// [0] = [WRITE] data
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
-// NewSetDataInstructionBuilder creates a new `SetData` instruction builder.
-func NewSetDataInstructionBuilder() *SetData {
-	nd := &SetData{
+// NewSetDataInstructionBuilder creates a new `SetDataInstruction` instruction builder.
+func NewSetDataInstructionBuilder() *SetDataInstruction {
+	nd := &SetDataInstruction{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 1),
 	}
 	return nd
 }
 
 // SetData sets the "data" parameter.
-func (inst *SetData) SetData(data Data) *SetData {
+func (inst *SetDataInstruction) SetData(data Data) *SetDataInstruction {
 	inst.Data = &data
 	return inst
 }
 
 // SetDataAccount sets the "data" account.
-func (inst *SetData) SetDataAccount(data ag_solanago.PublicKey) *SetData {
+func (inst *SetDataInstruction) SetDataAccount(data ag_solanago.PublicKey) *SetDataInstruction {
 	inst.AccountMetaSlice[0] = ag_solanago.Meta(data).WRITE()
 	return inst
 }
 
 // GetDataAccount gets the "data" account.
-func (inst *SetData) GetDataAccount() *ag_solanago.AccountMeta {
+func (inst *SetDataInstruction) GetDataAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
 }
 
-func (inst SetData) Build() *Instruction {
+func (inst SetDataInstruction) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
 		TypeID: Instruction_SetData,
@@ -53,14 +53,14 @@ func (inst SetData) Build() *Instruction {
 // ValidateAndBuild validates the instruction parameters and accounts;
 // if there is a validation error, it returns the error.
 // Otherwise, it builds and returns the instruction.
-func (inst SetData) ValidateAndBuild() (*Instruction, error) {
+func (inst SetDataInstruction) ValidateAndBuild() (*Instruction, error) {
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}
 	return inst.Build(), nil
 }
 
-func (inst *SetData) Validate() error {
+func (inst *SetDataInstruction) Validate() error {
 	// Check whether all (required) parameters are set:
 	{
 		if inst.Data == nil {
@@ -77,7 +77,7 @@ func (inst *SetData) Validate() error {
 	return nil
 }
 
-func (inst *SetData) EncodeToTree(parent ag_treeout.Branches) {
+func (inst *SetDataInstruction) EncodeToTree(parent ag_treeout.Branches) {
 	parent.Child(ag_format.Program(ProgramName, ProgramID)).
 		//
 		ParentFunc(func(programBranch ag_treeout.Branches) {
@@ -98,7 +98,7 @@ func (inst *SetData) EncodeToTree(parent ag_treeout.Branches) {
 		})
 }
 
-func (obj SetData) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj SetDataInstruction) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `Data` param:
 	err = encoder.Encode(obj.Data)
 	if err != nil {
@@ -106,7 +106,7 @@ func (obj SetData) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	}
 	return nil
 }
-func (obj *SetData) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *SetDataInstruction) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `Data`:
 	err = decoder.Decode(&obj.Data)
 	if err != nil {
@@ -120,7 +120,7 @@ func NewSetDataInstruction(
 	// Parameters:
 	data Data,
 	// Accounts:
-	dataAccount ag_solanago.PublicKey) *SetData {
+	dataAccount ag_solanago.PublicKey) *SetDataInstruction {
 	return NewSetDataInstructionBuilder().
 		SetData(data).
 		SetDataAccount(dataAccount)

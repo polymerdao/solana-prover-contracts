@@ -11,7 +11,7 @@ import (
 )
 
 // ResizeProofCache is the `resize_proof_cache` instruction.
-type ResizeProofCache struct {
+type ResizeProofCacheInstruction struct {
 
 	// [0] = [WRITE] cache_account
 	//
@@ -21,9 +21,9 @@ type ResizeProofCache struct {
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
-// NewResizeProofCacheInstructionBuilder creates a new `ResizeProofCache` instruction builder.
-func NewResizeProofCacheInstructionBuilder() *ResizeProofCache {
-	nd := &ResizeProofCache{
+// NewResizeProofCacheInstructionBuilder creates a new `ResizeProofCacheInstruction` instruction builder.
+func NewResizeProofCacheInstructionBuilder() *ResizeProofCacheInstruction {
+	nd := &ResizeProofCacheInstruction{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
 	}
 	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
@@ -31,12 +31,12 @@ func NewResizeProofCacheInstructionBuilder() *ResizeProofCache {
 }
 
 // SetCacheAccount sets the "cache_account" account.
-func (inst *ResizeProofCache) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *ResizeProofCache {
+func (inst *ResizeProofCacheInstruction) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *ResizeProofCacheInstruction {
 	inst.AccountMetaSlice[0] = ag_solanago.Meta(cacheAccount).WRITE()
 	return inst
 }
 
-func (inst *ResizeProofCache) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *ResizeProofCacheInstruction) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// path: authority
 	seeds = append(seeds, authority.Bytes())
@@ -51,12 +51,12 @@ func (inst *ResizeProofCache) findFindCacheAddress(authority ag_solanago.PublicK
 }
 
 // FindCacheAddressWithBumpSeed calculates CacheAccount account address with given seeds and a known bump seed.
-func (inst *ResizeProofCache) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+func (inst *ResizeProofCacheInstruction) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
 	pda, _, err = inst.findFindCacheAddress(authority, bumpSeed)
 	return
 }
 
-func (inst *ResizeProofCache) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
+func (inst *ResizeProofCacheInstruction) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, bumpSeed)
 	if err != nil {
 		panic(err)
@@ -65,12 +65,12 @@ func (inst *ResizeProofCache) MustFindCacheAddressWithBumpSeed(authority ag_sola
 }
 
 // FindCacheAddress finds CacheAccount account address with given seeds.
-func (inst *ResizeProofCache) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *ResizeProofCacheInstruction) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	pda, bumpSeed, err = inst.findFindCacheAddress(authority, 0)
 	return
 }
 
-func (inst *ResizeProofCache) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
+func (inst *ResizeProofCacheInstruction) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, 0)
 	if err != nil {
 		panic(err)
@@ -79,33 +79,33 @@ func (inst *ResizeProofCache) MustFindCacheAddress(authority ag_solanago.PublicK
 }
 
 // GetCacheAccount gets the "cache_account" account.
-func (inst *ResizeProofCache) GetCacheAccount() *ag_solanago.AccountMeta {
+func (inst *ResizeProofCacheInstruction) GetCacheAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
 }
 
 // SetAuthorityAccount sets the "authority" account.
-func (inst *ResizeProofCache) SetAuthorityAccount(authority ag_solanago.PublicKey) *ResizeProofCache {
+func (inst *ResizeProofCacheInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *ResizeProofCacheInstruction {
 	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
 	return inst
 }
 
 // GetAuthorityAccount gets the "authority" account.
-func (inst *ResizeProofCache) GetAuthorityAccount() *ag_solanago.AccountMeta {
+func (inst *ResizeProofCacheInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
 // SetSystemProgramAccount sets the "system_program" account.
-func (inst *ResizeProofCache) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *ResizeProofCache {
+func (inst *ResizeProofCacheInstruction) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *ResizeProofCacheInstruction {
 	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
 	return inst
 }
 
 // GetSystemProgramAccount gets the "system_program" account.
-func (inst *ResizeProofCache) GetSystemProgramAccount() *ag_solanago.AccountMeta {
+func (inst *ResizeProofCacheInstruction) GetSystemProgramAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(2)
 }
 
-func (inst ResizeProofCache) Build() *Instruction {
+func (inst ResizeProofCacheInstruction) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
 		TypeID: Instruction_ResizeProofCache,
@@ -115,14 +115,14 @@ func (inst ResizeProofCache) Build() *Instruction {
 // ValidateAndBuild validates the instruction parameters and accounts;
 // if there is a validation error, it returns the error.
 // Otherwise, it builds and returns the instruction.
-func (inst ResizeProofCache) ValidateAndBuild() (*Instruction, error) {
+func (inst ResizeProofCacheInstruction) ValidateAndBuild() (*Instruction, error) {
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}
 	return inst.Build(), nil
 }
 
-func (inst *ResizeProofCache) Validate() error {
+func (inst *ResizeProofCacheInstruction) Validate() error {
 	// Check whether all (required) accounts are set:
 	{
 		if inst.AccountMetaSlice[0] == nil {
@@ -138,7 +138,7 @@ func (inst *ResizeProofCache) Validate() error {
 	return nil
 }
 
-func (inst *ResizeProofCache) EncodeToTree(parent ag_treeout.Branches) {
+func (inst *ResizeProofCacheInstruction) EncodeToTree(parent ag_treeout.Branches) {
 	parent.Child(ag_format.Program(ProgramName, ProgramID)).
 		//
 		ParentFunc(func(programBranch ag_treeout.Branches) {
@@ -159,10 +159,10 @@ func (inst *ResizeProofCache) EncodeToTree(parent ag_treeout.Branches) {
 		})
 }
 
-func (obj ResizeProofCache) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj ResizeProofCacheInstruction) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	return nil
 }
-func (obj *ResizeProofCache) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *ResizeProofCacheInstruction) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	return nil
 }
 
@@ -171,7 +171,7 @@ func NewResizeProofCacheInstruction(
 	// Accounts:
 	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
-	systemProgram ag_solanago.PublicKey) *ResizeProofCache {
+	systemProgram ag_solanago.PublicKey) *ResizeProofCacheInstruction {
 	return NewResizeProofCacheInstructionBuilder().
 		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).

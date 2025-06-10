@@ -11,7 +11,7 @@ import (
 )
 
 // LoadProof is the `load_proof` instruction.
-type LoadProof struct {
+type LoadProofInstruction struct {
 	ProofChunk *[]byte
 
 	// [0] = [WRITE] cache_account
@@ -22,9 +22,9 @@ type LoadProof struct {
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
-// NewLoadProofInstructionBuilder creates a new `LoadProof` instruction builder.
-func NewLoadProofInstructionBuilder() *LoadProof {
-	nd := &LoadProof{
+// NewLoadProofInstructionBuilder creates a new `LoadProofInstruction` instruction builder.
+func NewLoadProofInstructionBuilder() *LoadProofInstruction {
+	nd := &LoadProofInstruction{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
 	}
 	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
@@ -32,18 +32,18 @@ func NewLoadProofInstructionBuilder() *LoadProof {
 }
 
 // SetProofChunk sets the "proof_chunk" parameter.
-func (inst *LoadProof) SetProofChunk(proof_chunk []byte) *LoadProof {
+func (inst *LoadProofInstruction) SetProofChunk(proof_chunk []byte) *LoadProofInstruction {
 	inst.ProofChunk = &proof_chunk
 	return inst
 }
 
 // SetCacheAccount sets the "cache_account" account.
-func (inst *LoadProof) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *LoadProof {
+func (inst *LoadProofInstruction) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *LoadProofInstruction {
 	inst.AccountMetaSlice[0] = ag_solanago.Meta(cacheAccount).WRITE()
 	return inst
 }
 
-func (inst *LoadProof) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *LoadProofInstruction) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// path: authority
 	seeds = append(seeds, authority.Bytes())
@@ -58,12 +58,12 @@ func (inst *LoadProof) findFindCacheAddress(authority ag_solanago.PublicKey, kno
 }
 
 // FindCacheAddressWithBumpSeed calculates CacheAccount account address with given seeds and a known bump seed.
-func (inst *LoadProof) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+func (inst *LoadProofInstruction) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
 	pda, _, err = inst.findFindCacheAddress(authority, bumpSeed)
 	return
 }
 
-func (inst *LoadProof) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
+func (inst *LoadProofInstruction) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, bumpSeed)
 	if err != nil {
 		panic(err)
@@ -72,12 +72,12 @@ func (inst *LoadProof) MustFindCacheAddressWithBumpSeed(authority ag_solanago.Pu
 }
 
 // FindCacheAddress finds CacheAccount account address with given seeds.
-func (inst *LoadProof) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *LoadProofInstruction) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	pda, bumpSeed, err = inst.findFindCacheAddress(authority, 0)
 	return
 }
 
-func (inst *LoadProof) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
+func (inst *LoadProofInstruction) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, 0)
 	if err != nil {
 		panic(err)
@@ -86,33 +86,33 @@ func (inst *LoadProof) MustFindCacheAddress(authority ag_solanago.PublicKey) (pd
 }
 
 // GetCacheAccount gets the "cache_account" account.
-func (inst *LoadProof) GetCacheAccount() *ag_solanago.AccountMeta {
+func (inst *LoadProofInstruction) GetCacheAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
 }
 
 // SetAuthorityAccount sets the "authority" account.
-func (inst *LoadProof) SetAuthorityAccount(authority ag_solanago.PublicKey) *LoadProof {
+func (inst *LoadProofInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *LoadProofInstruction {
 	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
 	return inst
 }
 
 // GetAuthorityAccount gets the "authority" account.
-func (inst *LoadProof) GetAuthorityAccount() *ag_solanago.AccountMeta {
+func (inst *LoadProofInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
 // SetSystemProgramAccount sets the "system_program" account.
-func (inst *LoadProof) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *LoadProof {
+func (inst *LoadProofInstruction) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *LoadProofInstruction {
 	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
 	return inst
 }
 
 // GetSystemProgramAccount gets the "system_program" account.
-func (inst *LoadProof) GetSystemProgramAccount() *ag_solanago.AccountMeta {
+func (inst *LoadProofInstruction) GetSystemProgramAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(2)
 }
 
-func (inst LoadProof) Build() *Instruction {
+func (inst LoadProofInstruction) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
 		TypeID: Instruction_LoadProof,
@@ -122,14 +122,14 @@ func (inst LoadProof) Build() *Instruction {
 // ValidateAndBuild validates the instruction parameters and accounts;
 // if there is a validation error, it returns the error.
 // Otherwise, it builds and returns the instruction.
-func (inst LoadProof) ValidateAndBuild() (*Instruction, error) {
+func (inst LoadProofInstruction) ValidateAndBuild() (*Instruction, error) {
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}
 	return inst.Build(), nil
 }
 
-func (inst *LoadProof) Validate() error {
+func (inst *LoadProofInstruction) Validate() error {
 	// Check whether all (required) parameters are set:
 	{
 		if inst.ProofChunk == nil {
@@ -152,7 +152,7 @@ func (inst *LoadProof) Validate() error {
 	return nil
 }
 
-func (inst *LoadProof) EncodeToTree(parent ag_treeout.Branches) {
+func (inst *LoadProofInstruction) EncodeToTree(parent ag_treeout.Branches) {
 	parent.Child(ag_format.Program(ProgramName, ProgramID)).
 		//
 		ParentFunc(func(programBranch ag_treeout.Branches) {
@@ -175,7 +175,7 @@ func (inst *LoadProof) EncodeToTree(parent ag_treeout.Branches) {
 		})
 }
 
-func (obj LoadProof) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj LoadProofInstruction) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `ProofChunk` param:
 	err = encoder.Encode(obj.ProofChunk)
 	if err != nil {
@@ -183,7 +183,7 @@ func (obj LoadProof) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) 
 	}
 	return nil
 }
-func (obj *LoadProof) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *LoadProofInstruction) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `ProofChunk`:
 	err = decoder.Decode(&obj.ProofChunk)
 	if err != nil {
@@ -199,7 +199,7 @@ func NewLoadProofInstruction(
 	// Accounts:
 	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
-	systemProgram ag_solanago.PublicKey) *LoadProof {
+	systemProgram ag_solanago.PublicKey) *LoadProofInstruction {
 	return NewLoadProofInstructionBuilder().
 		SetProofChunk(proof_chunk).
 		SetCacheAccount(cacheAccount).
