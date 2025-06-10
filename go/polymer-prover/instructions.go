@@ -73,19 +73,19 @@ var InstructionImplDef = ag_binary.NewVariantDefinition(
 	ag_binary.AnchorTypeIDEncoding,
 	[]ag_binary.VariantType{
 		{
-			Name: "clear_proof_cache", Type: (*ClearProofCache)(nil),
+			Name: "clear_proof_cache", Type: (*ClearProofCacheInstruction)(nil),
 		},
 		{
-			Name: "initialize", Type: (*Initialize)(nil),
+			Name: "initialize", Type: (*InitializeInstruction)(nil),
 		},
 		{
-			Name: "load_proof", Type: (*LoadProof)(nil),
+			Name: "load_proof", Type: (*LoadProofInstruction)(nil),
 		},
 		{
-			Name: "resize_proof_cache", Type: (*ResizeProofCache)(nil),
+			Name: "resize_proof_cache", Type: (*ResizeProofCacheInstruction)(nil),
 		},
 		{
-			Name: "validate_event", Type: (*ValidateEvent)(nil),
+			Name: "validate_event", Type: (*ValidateEventInstruction)(nil),
 		},
 	},
 )

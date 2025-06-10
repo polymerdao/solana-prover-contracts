@@ -11,7 +11,7 @@ import (
 )
 
 // ValidateEvent is the `validate_event` instruction.
-type ValidateEvent struct {
+type ValidateEventInstruction struct {
 
 	// [0] = [WRITE] cache_account
 	//
@@ -24,9 +24,9 @@ type ValidateEvent struct {
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
-// NewValidateEventInstructionBuilder creates a new `ValidateEvent` instruction builder.
-func NewValidateEventInstructionBuilder() *ValidateEvent {
-	nd := &ValidateEvent{
+// NewValidateEventInstructionBuilder creates a new `ValidateEventInstruction` instruction builder.
+func NewValidateEventInstructionBuilder() *ValidateEventInstruction {
+	nd := &ValidateEventInstruction{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
 	}
 	nd.AccountMetaSlice[3] = ag_solanago.Meta(Addresses["Sysvar1nstructions1111111111111111111111111"])
@@ -34,12 +34,12 @@ func NewValidateEventInstructionBuilder() *ValidateEvent {
 }
 
 // SetCacheAccount sets the "cache_account" account.
-func (inst *ValidateEvent) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *ValidateEvent {
+func (inst *ValidateEventInstruction) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *ValidateEventInstruction {
 	inst.AccountMetaSlice[0] = ag_solanago.Meta(cacheAccount).WRITE()
 	return inst
 }
 
-func (inst *ValidateEvent) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *ValidateEventInstruction) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// path: authority
 	seeds = append(seeds, authority.Bytes())
@@ -54,12 +54,12 @@ func (inst *ValidateEvent) findFindCacheAddress(authority ag_solanago.PublicKey,
 }
 
 // FindCacheAddressWithBumpSeed calculates CacheAccount account address with given seeds and a known bump seed.
-func (inst *ValidateEvent) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+func (inst *ValidateEventInstruction) FindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
 	pda, _, err = inst.findFindCacheAddress(authority, bumpSeed)
 	return
 }
 
-func (inst *ValidateEvent) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
+func (inst *ValidateEventInstruction) MustFindCacheAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, bumpSeed)
 	if err != nil {
 		panic(err)
@@ -68,12 +68,12 @@ func (inst *ValidateEvent) MustFindCacheAddressWithBumpSeed(authority ag_solanag
 }
 
 // FindCacheAddress finds CacheAccount account address with given seeds.
-func (inst *ValidateEvent) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *ValidateEventInstruction) FindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	pda, bumpSeed, err = inst.findFindCacheAddress(authority, 0)
 	return
 }
 
-func (inst *ValidateEvent) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
+func (inst *ValidateEventInstruction) MustFindCacheAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindCacheAddress(authority, 0)
 	if err != nil {
 		panic(err)
@@ -82,28 +82,28 @@ func (inst *ValidateEvent) MustFindCacheAddress(authority ag_solanago.PublicKey)
 }
 
 // GetCacheAccount gets the "cache_account" account.
-func (inst *ValidateEvent) GetCacheAccount() *ag_solanago.AccountMeta {
+func (inst *ValidateEventInstruction) GetCacheAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
 }
 
 // SetAuthorityAccount sets the "authority" account.
-func (inst *ValidateEvent) SetAuthorityAccount(authority ag_solanago.PublicKey) *ValidateEvent {
+func (inst *ValidateEventInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *ValidateEventInstruction {
 	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
 	return inst
 }
 
 // GetAuthorityAccount gets the "authority" account.
-func (inst *ValidateEvent) GetAuthorityAccount() *ag_solanago.AccountMeta {
+func (inst *ValidateEventInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
 // SetInternalAccount sets the "internal" account.
-func (inst *ValidateEvent) SetInternalAccount(internal ag_solanago.PublicKey) *ValidateEvent {
+func (inst *ValidateEventInstruction) SetInternalAccount(internal ag_solanago.PublicKey) *ValidateEventInstruction {
 	inst.AccountMetaSlice[2] = ag_solanago.Meta(internal)
 	return inst
 }
 
-func (inst *ValidateEvent) findFindInternalAddress(knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *ValidateEventInstruction) findFindInternalAddress(knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// const: internal
 	seeds = append(seeds, []byte{byte(0x69), byte(0x6e), byte(0x74), byte(0x65), byte(0x72), byte(0x6e), byte(0x61), byte(0x6c)})
@@ -118,12 +118,12 @@ func (inst *ValidateEvent) findFindInternalAddress(knownBumpSeed uint8) (pda ag_
 }
 
 // FindInternalAddressWithBumpSeed calculates Internal account address with given seeds and a known bump seed.
-func (inst *ValidateEvent) FindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+func (inst *ValidateEventInstruction) FindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
 	pda, _, err = inst.findFindInternalAddress(bumpSeed)
 	return
 }
 
-func (inst *ValidateEvent) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey) {
+func (inst *ValidateEventInstruction) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindInternalAddress(bumpSeed)
 	if err != nil {
 		panic(err)
@@ -132,12 +132,12 @@ func (inst *ValidateEvent) MustFindInternalAddressWithBumpSeed(bumpSeed uint8) (
 }
 
 // FindInternalAddress finds Internal account address with given seeds.
-func (inst *ValidateEvent) FindInternalAddress() (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *ValidateEventInstruction) FindInternalAddress() (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	pda, bumpSeed, err = inst.findFindInternalAddress(0)
 	return
 }
 
-func (inst *ValidateEvent) MustFindInternalAddress() (pda ag_solanago.PublicKey) {
+func (inst *ValidateEventInstruction) MustFindInternalAddress() (pda ag_solanago.PublicKey) {
 	pda, _, err := inst.findFindInternalAddress(0)
 	if err != nil {
 		panic(err)
@@ -146,24 +146,24 @@ func (inst *ValidateEvent) MustFindInternalAddress() (pda ag_solanago.PublicKey)
 }
 
 // GetInternalAccount gets the "internal" account.
-func (inst *ValidateEvent) GetInternalAccount() *ag_solanago.AccountMeta {
+func (inst *ValidateEventInstruction) GetInternalAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(2)
 }
 
 // SetInstructionsAccount sets the "instructions" account.
 // CPI
-func (inst *ValidateEvent) SetInstructionsAccount(instructions ag_solanago.PublicKey) *ValidateEvent {
+func (inst *ValidateEventInstruction) SetInstructionsAccount(instructions ag_solanago.PublicKey) *ValidateEventInstruction {
 	inst.AccountMetaSlice[3] = ag_solanago.Meta(instructions)
 	return inst
 }
 
 // GetInstructionsAccount gets the "instructions" account.
 // CPI
-func (inst *ValidateEvent) GetInstructionsAccount() *ag_solanago.AccountMeta {
+func (inst *ValidateEventInstruction) GetInstructionsAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(3)
 }
 
-func (inst ValidateEvent) Build() *Instruction {
+func (inst ValidateEventInstruction) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
 		TypeID: Instruction_ValidateEvent,
@@ -173,14 +173,14 @@ func (inst ValidateEvent) Build() *Instruction {
 // ValidateAndBuild validates the instruction parameters and accounts;
 // if there is a validation error, it returns the error.
 // Otherwise, it builds and returns the instruction.
-func (inst ValidateEvent) ValidateAndBuild() (*Instruction, error) {
+func (inst ValidateEventInstruction) ValidateAndBuild() (*Instruction, error) {
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}
 	return inst.Build(), nil
 }
 
-func (inst *ValidateEvent) Validate() error {
+func (inst *ValidateEventInstruction) Validate() error {
 	// Check whether all (required) accounts are set:
 	{
 		if inst.AccountMetaSlice[0] == nil {
@@ -199,7 +199,7 @@ func (inst *ValidateEvent) Validate() error {
 	return nil
 }
 
-func (inst *ValidateEvent) EncodeToTree(parent ag_treeout.Branches) {
+func (inst *ValidateEventInstruction) EncodeToTree(parent ag_treeout.Branches) {
 	parent.Child(ag_format.Program(ProgramName, ProgramID)).
 		//
 		ParentFunc(func(programBranch ag_treeout.Branches) {
@@ -221,10 +221,10 @@ func (inst *ValidateEvent) EncodeToTree(parent ag_treeout.Branches) {
 		})
 }
 
-func (obj ValidateEvent) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj ValidateEventInstruction) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	return nil
 }
-func (obj *ValidateEvent) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *ValidateEventInstruction) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	return nil
 }
 
@@ -234,7 +234,7 @@ func NewValidateEventInstruction(
 	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
 	internal ag_solanago.PublicKey,
-	instructions ag_solanago.PublicKey) *ValidateEvent {
+	instructions ag_solanago.PublicKey) *ValidateEventInstruction {
 	return NewValidateEventInstructionBuilder().
 		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).

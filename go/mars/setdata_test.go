@@ -15,13 +15,13 @@ func TestEncodeDecode_SetData(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		t.Run("SetData"+strconv.Itoa(i), func(t *testing.T) {
 			{
-				params := new(SetData)
+				params := new(SetDataInstruction)
 				fu.Fuzz(params)
 				params.AccountMetaSlice = nil
 				buf := new(bytes.Buffer)
 				err := encodeT(*params, buf)
 				ag_require.NoError(t, err)
-				got := new(SetData)
+				got := new(SetDataInstruction)
 				err = decodeT(got, buf.Bytes())
 				got.AccountMetaSlice = nil
 				ag_require.NoError(t, err)
