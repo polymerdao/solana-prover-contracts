@@ -452,10 +452,20 @@ describe("localnet", () => {
 
     const dataAccount = findProgramAddress([signer.publicKey.toBuffer()], mars.programId);
 
-    await mars.methods
+    const sig = await mars.methods
       .setData({ data: data })
       .accounts({ data: dataAccount })
       .rpc(confirmOptions);
+
+    const tx = await provider.connection.getTransaction(sig, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+
+    console.log(tx.meta.logMessages)
+
+    const msg = findLogMessage("Prove", tx)
+    assert.ok(msg.includes(`Prove: program: ${mars.programId}, data: ${data}`))
 
     const account = await mars.account.data.fetch(dataAccount);
     assert.equal(data, account.data.toString())
