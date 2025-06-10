@@ -19,7 +19,7 @@ mod mars {
         data_account.data = data.data;
         // DO NOT REMOVE
         // this msg is what we end up generating a proof for!
-        msg!("Prove: Data: {}", data_account.data);
+        msg!("Prove: program: {}, data: {}", ID, data_account.data);
         Ok(())
     }
 }
