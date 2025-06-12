@@ -21,7 +21,11 @@ runs:
     - name: Read Anchor version
       shell: bash
       run: |
-        anchor_version="$( yq '.dependencies.anchor-lang.version' ./programs/polymer-prover/Cargo.toml )"
+        anchor_version="$( yq '.dependencies.anchor-lang' ./programs/polymer-prover/Cargo.toml )"
+        if [[ -z "$anchor_version" ]]; then
+          echo "Anchor version not found in Cargo.toml"
+          exit 1
+        fi
         echo "ANCHOR_VERSION=$anchor_version" >> $GITHUB_ENV
 
     - name: Configure Git credentials

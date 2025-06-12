@@ -40,14 +40,20 @@ describe("localnet", () => {
     console.log(`CPI CLIENT ID:     ${cpiclient.programId}`)
     console.log(`MARS ID:           ${mars.programId}`)
 
-    const output = runProverCtl(
+    const out0 = runProverCtl(
       '--keypair', bs58.encode(wallet.payer.secretKey),
       'initialize',
       '--signer-addr', signerAddress.toString('hex'),
       '--client-type', 'proof_api',
       '--peptide-chain-id', peptideChainId.toString(),
     )
-    assert.ok(output.includes('Instruction: Initialize'))
+    assert.ok(out0.includes('Instruction: Initialize'))
+
+    const out1 = runProverCtl(
+      '--keypair', bs58.encode(wallet.payer.secretKey),
+      'create-accounts',
+    )
+    assert.ok(out1.includes('accounts successfully created'))
   })
 
   it("internal accounts are set after init", async () => {
@@ -329,14 +335,9 @@ describe("localnet", () => {
     const newSigner = await generateAndFundNewSigner()
     const cacheAccount = findProgramAddress([Buffer.from("cache"), newSigner.publicKey.toBuffer()], program.programId);
 
-    // the cache account of the new signer will only be created when loadProof is called
-    try {
-      await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
-      throw new Error('Expected error was not thrown');
-    } catch (err) {
-      assert.ok(err instanceof Error)
-      assert.ok(err.message.includes('Account does not exist or has no data'))
-    }
+    // the cache account should be empty at this point
+    const cache0 = await program.account.proofCacheAccount.fetch(cacheAccount, "confirmed")
+    assert.equal(0, cache0.cache.length)
 
     await program.methods
       .loadProof(proof.subarray(0, 600))
@@ -491,6 +492,14 @@ describe("localnet", () => {
 
     },
       'confirmed')
+
+    // must create accounts first
+    await program.methods
+      .createAccounts()
+      .accounts({ authority: signer.publicKey })
+      .signers([signer])
+      .rpc(confirmOptions)
+
     return signer
   }
 

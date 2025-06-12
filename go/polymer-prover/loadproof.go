@@ -18,17 +18,14 @@ type LoadProofInstruction struct {
 	// ··········· user will be the owner of the pda account
 	//
 	// [1] = [WRITE] cache_account
-	//
-	// [2] = [] system_program
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
 // NewLoadProofInstructionBuilder creates a new `LoadProofInstruction` instruction builder.
 func NewLoadProofInstructionBuilder() *LoadProofInstruction {
 	nd := &LoadProofInstruction{
-		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
+		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 2),
 	}
-	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
 	return nd
 }
 
@@ -106,17 +103,6 @@ func (inst *LoadProofInstruction) GetCacheAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
-// SetSystemProgramAccount sets the "system_program" account.
-func (inst *LoadProofInstruction) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *LoadProofInstruction {
-	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
-	return inst
-}
-
-// GetSystemProgramAccount gets the "system_program" account.
-func (inst *LoadProofInstruction) GetSystemProgramAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(2)
-}
-
 func (inst LoadProofInstruction) Build() *Instruction {
 	return &Instruction{BaseVariant: ag_binary.BaseVariant{
 		Impl:   inst,
@@ -150,9 +136,6 @@ func (inst *LoadProofInstruction) Validate() error {
 		if inst.AccountMetaSlice[1] == nil {
 			return errors.New("accounts.CacheAccount is not set")
 		}
-		if inst.AccountMetaSlice[2] == nil {
-			return errors.New("accounts.SystemProgram is not set")
-		}
 	}
 	return nil
 }
@@ -171,10 +154,9 @@ func (inst *LoadProofInstruction) EncodeToTree(parent ag_treeout.Branches) {
 					})
 
 					// Accounts of the instruction:
-					instructionBranch.Child("Accounts[len=3]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("        cache_", inst.AccountMetaSlice.Get(1)))
-						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(2)))
+					instructionBranch.Child("Accounts[len=2]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
+						accountsBranch.Child(ag_format.Meta("authority", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("   cache_", inst.AccountMetaSlice.Get(1)))
 					})
 				})
 		})
@@ -203,11 +185,9 @@ func NewLoadProofInstruction(
 	proof_chunk []byte,
 	// Accounts:
 	authority ag_solanago.PublicKey,
-	cacheAccount ag_solanago.PublicKey,
-	systemProgram ag_solanago.PublicKey) *LoadProofInstruction {
+	cacheAccount ag_solanago.PublicKey) *LoadProofInstruction {
 	return NewLoadProofInstructionBuilder().
 		SetProofChunk(proof_chunk).
 		SetAuthorityAccount(authority).
-		SetCacheAccount(cacheAccount).
-		SetSystemProgramAccount(systemProgram)
+		SetCacheAccount(cacheAccount)
 }
