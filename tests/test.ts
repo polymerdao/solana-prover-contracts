@@ -96,7 +96,7 @@ describe("localnet", () => {
       .rpc(confirmOptions);
 
     // at this point the first chunk should be stored in the cache pda
-    const cachePda = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId);
+    const cachePda = findProgramAddress([Buffer.from("cache"), newSigner.publicKey.toBuffer()], program.programId);
     const cache0 = await program.account.proofCacheAccount.fetch(cachePda, "confirmed")
     assert.deepEqual(proof.subarray(0, 800), cache0.cache)
 
@@ -153,8 +153,8 @@ describe("localnet", () => {
     ])
 
     // at this point the first chunks should be stored in their respective pda accounts
-    const cachePda0 = findProgramAddress([user0.publicKey.toBuffer()], program.programId);
-    const cachePda1 = findProgramAddress([user1.publicKey.toBuffer()], program.programId);
+    const cachePda0 = findProgramAddress([Buffer.from("cache"), user0.publicKey.toBuffer()], program.programId);
+    const cachePda1 = findProgramAddress([Buffer.from("cache"), user1.publicKey.toBuffer()], program.programId);
 
     {
       const caches = await Promise.all([
@@ -327,7 +327,7 @@ describe("localnet", () => {
 
   it("clears cache", async () => {
     const newSigner = await generateAndFundNewSigner()
-    const cacheAccount = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId);
+    const cacheAccount = findProgramAddress([Buffer.from("cache"), newSigner.publicKey.toBuffer()], program.programId);
 
     // the cache account of the new signer will only be created when loadProof is called
     try {
@@ -363,7 +363,7 @@ describe("localnet", () => {
   it("runs proverctl", async () => {
     const newSigner = await generateAndFundNewSigner()
 
-    const cacheAccount = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId);
+    const cacheAccount = findProgramAddress([Buffer.from("cache"), newSigner.publicKey.toBuffer()], program.programId);
 
     await program.methods
       .loadProof(proof.subarray(0, 600))
@@ -385,7 +385,7 @@ describe("localnet", () => {
 
   it("support cpi calls", async () => {
     const newSigner = await generateAndFundNewSigner()
-    const cacheAccount = findProgramAddress([newSigner.publicKey.toBuffer()], program.programId)
+    const cacheAccount = findProgramAddress([Buffer.from("cache"), newSigner.publicKey.toBuffer()], program.programId);
 
     await cpiclient.methods
       .callLoadProof()

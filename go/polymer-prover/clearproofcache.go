@@ -13,9 +13,10 @@ import (
 // ClearProofCache is the `clear_proof_cache` instruction.
 type ClearProofCacheInstruction struct {
 
-	// [0] = [WRITE] cache_account
+	// [0] = [WRITE, SIGNER] authority
+	// ··········· user will be the owner of the pda account
 	//
-	// [1] = [WRITE, SIGNER] authority
+	// [1] = [WRITE] cache_account
 	//
 	// [2] = [] system_program
 	ag_solanago.AccountMetaSlice `bin:"-"`
@@ -30,14 +31,29 @@ func NewClearProofCacheInstructionBuilder() *ClearProofCacheInstruction {
 	return nd
 }
 
+// SetAuthorityAccount sets the "authority" account.
+// user will be the owner of the pda account
+func (inst *ClearProofCacheInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *ClearProofCacheInstruction {
+	inst.AccountMetaSlice[0] = ag_solanago.Meta(authority).WRITE().SIGNER()
+	return inst
+}
+
+// GetAuthorityAccount gets the "authority" account.
+// user will be the owner of the pda account
+func (inst *ClearProofCacheInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
+	return inst.AccountMetaSlice.Get(0)
+}
+
 // SetCacheAccount sets the "cache_account" account.
 func (inst *ClearProofCacheInstruction) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *ClearProofCacheInstruction {
-	inst.AccountMetaSlice[0] = ag_solanago.Meta(cacheAccount).WRITE()
+	inst.AccountMetaSlice[1] = ag_solanago.Meta(cacheAccount).WRITE()
 	return inst
 }
 
 func (inst *ClearProofCacheInstruction) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
+	// const: cache
+	seeds = append(seeds, []byte{byte(0x63), byte(0x61), byte(0x63), byte(0x68), byte(0x65)})
 	// path: authority
 	seeds = append(seeds, authority.Bytes())
 
@@ -80,17 +96,6 @@ func (inst *ClearProofCacheInstruction) MustFindCacheAddress(authority ag_solana
 
 // GetCacheAccount gets the "cache_account" account.
 func (inst *ClearProofCacheInstruction) GetCacheAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(0)
-}
-
-// SetAuthorityAccount sets the "authority" account.
-func (inst *ClearProofCacheInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *ClearProofCacheInstruction {
-	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
-	return inst
-}
-
-// GetAuthorityAccount gets the "authority" account.
-func (inst *ClearProofCacheInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
@@ -126,10 +131,10 @@ func (inst *ClearProofCacheInstruction) Validate() error {
 	// Check whether all (required) accounts are set:
 	{
 		if inst.AccountMetaSlice[0] == nil {
-			return errors.New("accounts.CacheAccount is not set")
+			return errors.New("accounts.Authority is not set")
 		}
 		if inst.AccountMetaSlice[1] == nil {
-			return errors.New("accounts.Authority is not set")
+			return errors.New("accounts.CacheAccount is not set")
 		}
 		if inst.AccountMetaSlice[2] == nil {
 			return errors.New("accounts.SystemProgram is not set")
@@ -151,8 +156,8 @@ func (inst *ClearProofCacheInstruction) EncodeToTree(parent ag_treeout.Branches)
 
 					// Accounts of the instruction:
 					instructionBranch.Child("Accounts[len=3]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("        cache_", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(1)))
+						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("        cache_", inst.AccountMetaSlice.Get(1)))
 						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(2)))
 					})
 				})
@@ -169,11 +174,11 @@ func (obj *ClearProofCacheInstruction) UnmarshalWithDecoder(decoder *ag_binary.D
 // NewClearProofCacheInstruction declares a new ClearProofCache instruction with the provided parameters and accounts.
 func NewClearProofCacheInstruction(
 	// Accounts:
-	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
+	cacheAccount ag_solanago.PublicKey,
 	systemProgram ag_solanago.PublicKey) *ClearProofCacheInstruction {
 	return NewClearProofCacheInstructionBuilder().
-		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).
+		SetCacheAccount(cacheAccount).
 		SetSystemProgramAccount(systemProgram)
 }

@@ -22,6 +22,11 @@ declare_id!("FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3");
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    // user will be the owner of the internal account
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+
+    /// hold the internal fields that need to be used during the proof validation
     #[account(
         init,
         payer = authority,
@@ -31,8 +36,7 @@ pub struct Initialize<'info> {
     )]
     pub internal: Account<'info, InternalAccount>,
 
-    #[account(mut, signer)]
-    pub authority: Signer<'info>,
+    /// required to create the pda account
     pub system_program: Program<'info, System>,
 }
 
@@ -55,16 +59,21 @@ pub struct InternalAccount {
 
 #[derive(Accounts)]
 pub struct ValidateEvent<'info> {
+    // user will be the owner of the pda account
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+
+    /// CHECK: the proof lives in this account. It would have been loaded into via the
+    /// LoadProof instruction
     #[account(
         mut,
-        seeds = [authority.key().as_ref()],
+        seeds = [b"cache", authority.key().as_ref()],
         bump,
     )]
     pub cache_account: Account<'info, ProofCacheAccount>,
-    #[account(mut, signer)]
-    // user will be the owner of the pda account
-    pub authority: Signer<'info>,
 
+    /// CHECK: we need to access the internal account to get the client type and signer address,
+    /// which are unique to the program instance and required to validate the proof
     #[account(
         seeds = [b"internal"],
         bump,
@@ -86,36 +95,41 @@ pub struct ProofCacheAccount {
 
 #[derive(Accounts)]
 pub struct LoadProof<'info> {
+    /// user will be the owner of the pda account
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+
+    /// CHECK: here's where the proof chunks are stored
     #[account(
         init_if_needed,
-        seeds = [authority.key().as_ref()],
+        seeds = [b"cache", authority.key().as_ref()],
         bump,
         payer = authority,
         space = DISCRIMINATOR_SIZE + ProofCacheAccount::INIT_SPACE,
     )]
     pub cache_account: Account<'info, ProofCacheAccount>,
-    #[account(mut, signer)]
-    // user will be the owner of the pda account
-    pub authority: Signer<'info>,
+
     // need this to create the pda account
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct ClearProofCache<'info> {
+    /// user will be the owner of the pda account
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+
+    /// CHECK: this is used to store the chunks of the proof to be validated later. We have to do
     #[account(
         mut ,
-        seeds = [authority.key().as_ref()],
+        seeds = [b"cache", authority.key().as_ref()],
         bump,
     )]
     pub cache_account: Account<'info, ProofCacheAccount>,
-    #[account(mut, signer)]
-    pub authority: Signer<'info>,
+
     // need this to mutate the pda account
     pub system_program: Program<'info, System>,
 }
-// #[derive(Accounts)]
-// pub struct ParseEvent {}
 
 #[program]
 pub mod polymer_prover {
