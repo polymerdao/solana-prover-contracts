@@ -154,6 +154,31 @@ pub struct CreateAccounts<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CloseAccounts<'info> {
+    // user will be the owner of the pda accounts
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+
+    /// CHECK: close the cache account and transfer its lamports to the authority
+    #[account(
+        mut,
+        close = authority,
+        seeds = [b"cache", authority.key().as_ref()],
+        bump,
+    )]
+    pub cache_account: Account<'info, ProofCacheAccount>,
+
+    /// CHECK: close the result account and transfer its lamports to the authority
+    #[account(
+        mut,
+        close = authority,
+        seeds = [b"result", authority.key().as_ref()],
+        bump,
+    )]
+    pub result_account: Account<'info, ValidationResultAccount>,
+}
+
+#[derive(Accounts)]
 pub struct LoadProof<'info> {
     /// user will be the owner of the pda account
     #[account(mut, signer)]
@@ -219,6 +244,11 @@ pub mod polymer_prover {
 
     pub fn create_accounts(_ctx: Context<CreateAccounts>) -> Result<()> {
         msg!("accounts successfully created");
+        Ok(())
+    }
+
+    pub fn close_accounts(_ctx: Context<CloseAccounts>) -> Result<()> {
+        msg!("accounts successfully closed");
         Ok(())
     }
 

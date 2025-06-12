@@ -143,6 +143,30 @@ describe("localnet", () => {
     await checkValidatationResult(newSigner, 11_155_420, 'op-event-v2.json')
   });
 
+  it("closes accounts", async () => {
+    const newSigner = await generateAndFundNewSigner()
+    const cachePda = findProgramAddress([Buffer.from("cache"), newSigner.publicKey.toBuffer()], program.programId);
+    const resultPda = findProgramAddress([Buffer.from("result"), newSigner.publicKey.toBuffer()], program.programId);
+
+    // close the cache and result account now
+    const lamportsBefore = await provider.connection.getBalance(newSigner.publicKey, "confirmed");
+
+    const out = runProverCtl(
+      '--keypair', bs58.encode(newSigner.secretKey),
+      'close-accounts',
+    )
+    assert.ok(out.includes('accounts successfully closed'))
+
+    const lamportsAfter = await provider.connection.getBalance(newSigner.publicKey, "confirmed");
+    assert.isAbove(lamportsAfter, lamportsBefore, "Receiver should get lamports back");
+
+    const cache = await provider.connection.getAccountInfo(cachePda, "confirmed");
+    assert.isNull(cache, "cache account should be closed");
+
+    const result = await provider.connection.getAccountInfo(resultPda, "confirmed");
+    assert.isNull(result, "result account should be closed");
+  });
+
 
   // same as previous one but with two concurrent users. The proof is the same in both cases but it is split in
   // different chunks for every user

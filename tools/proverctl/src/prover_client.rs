@@ -2,7 +2,7 @@ use anchor_lang::InstructionData;
 use anyhow::{Ok, Result};
 use log::{info, warn};
 use polymer_prover::{
-    instruction::{ClearProofCache, CreateAccounts, Initialize},
+    instruction::{ClearProofCache, CloseAccounts, CreateAccounts, Initialize},
     instructions::parse_event::EthAddress,
 };
 use retry::{delay::Fixed, retry, OperationResult};
@@ -86,6 +86,22 @@ impl Client {
                 AccountMeta::new(cache_account, false),
                 AccountMeta::new(result_account, false),
                 AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
+            ],
+        };
+
+        let tx = self.send_tx(instruction, &[])?;
+        self.show_tx_logs(tx);
+        Ok(())
+    }
+
+    pub fn send_close_accounts(&self) -> Result<()> {
+        let instruction = Instruction {
+            program_id: self.program.pubkey(),
+            data: CloseAccounts.data(),
+            accounts: vec![
+                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.find_cache_account(), false),
+                AccountMeta::new(self.find_result_account(), false),
             ],
         };
 
