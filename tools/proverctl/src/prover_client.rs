@@ -47,8 +47,8 @@ impl Client {
             program_id: self.program_id,
             data: Initialize::data(&data),
             accounts: vec![
-                AccountMeta::new(internal_account, false),
                 AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(internal_account, false),
                 AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             ],
         };
@@ -64,8 +64,8 @@ impl Client {
             program_id: self.program_id,
             data: ClearProofCache.data(),
             accounts: vec![
-                AccountMeta::new(cache_account, false),
                 AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(cache_account, false),
                 AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             ],
         };
@@ -76,7 +76,7 @@ impl Client {
     }
 
     fn find_cache_account(&self) -> Pubkey {
-        let (account, _) = Pubkey::find_program_address(&[self.payer.pubkey().as_ref()], &self.program_id);
+        let (account, _) = Pubkey::find_program_address(&[b"cache", self.payer.pubkey().as_ref()], &self.program_id);
         info!("CACHE: {}", account);
         account
     }

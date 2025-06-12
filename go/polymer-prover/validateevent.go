@@ -13,11 +13,13 @@ import (
 // ValidateEvent is the `validate_event` instruction.
 type ValidateEventInstruction struct {
 
-	// [0] = [WRITE] cache_account
+	// [0] = [WRITE, SIGNER] authority
 	//
-	// [1] = [WRITE, SIGNER] authority
+	// [1] = [WRITE] cache_account
+	// ··········· LoadProof instruction
 	//
 	// [2] = [] internal
+	// ··········· which are unique to the program instance and required to validate the proof
 	//
 	// [3] = [] instructions
 	// ··········· CPI
@@ -33,14 +35,28 @@ func NewValidateEventInstructionBuilder() *ValidateEventInstruction {
 	return nd
 }
 
+// SetAuthorityAccount sets the "authority" account.
+func (inst *ValidateEventInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *ValidateEventInstruction {
+	inst.AccountMetaSlice[0] = ag_solanago.Meta(authority).WRITE().SIGNER()
+	return inst
+}
+
+// GetAuthorityAccount gets the "authority" account.
+func (inst *ValidateEventInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
+	return inst.AccountMetaSlice.Get(0)
+}
+
 // SetCacheAccount sets the "cache_account" account.
+// LoadProof instruction
 func (inst *ValidateEventInstruction) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *ValidateEventInstruction {
-	inst.AccountMetaSlice[0] = ag_solanago.Meta(cacheAccount).WRITE()
+	inst.AccountMetaSlice[1] = ag_solanago.Meta(cacheAccount).WRITE()
 	return inst
 }
 
 func (inst *ValidateEventInstruction) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
+	// const: cache
+	seeds = append(seeds, []byte{byte(0x63), byte(0x61), byte(0x63), byte(0x68), byte(0x65)})
 	// path: authority
 	seeds = append(seeds, authority.Bytes())
 
@@ -82,22 +98,13 @@ func (inst *ValidateEventInstruction) MustFindCacheAddress(authority ag_solanago
 }
 
 // GetCacheAccount gets the "cache_account" account.
+// LoadProof instruction
 func (inst *ValidateEventInstruction) GetCacheAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(0)
-}
-
-// SetAuthorityAccount sets the "authority" account.
-func (inst *ValidateEventInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *ValidateEventInstruction {
-	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
-	return inst
-}
-
-// GetAuthorityAccount gets the "authority" account.
-func (inst *ValidateEventInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
 // SetInternalAccount sets the "internal" account.
+// which are unique to the program instance and required to validate the proof
 func (inst *ValidateEventInstruction) SetInternalAccount(internal ag_solanago.PublicKey) *ValidateEventInstruction {
 	inst.AccountMetaSlice[2] = ag_solanago.Meta(internal)
 	return inst
@@ -146,6 +153,7 @@ func (inst *ValidateEventInstruction) MustFindInternalAddress() (pda ag_solanago
 }
 
 // GetInternalAccount gets the "internal" account.
+// which are unique to the program instance and required to validate the proof
 func (inst *ValidateEventInstruction) GetInternalAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(2)
 }
@@ -184,10 +192,10 @@ func (inst *ValidateEventInstruction) Validate() error {
 	// Check whether all (required) accounts are set:
 	{
 		if inst.AccountMetaSlice[0] == nil {
-			return errors.New("accounts.CacheAccount is not set")
+			return errors.New("accounts.Authority is not set")
 		}
 		if inst.AccountMetaSlice[1] == nil {
-			return errors.New("accounts.Authority is not set")
+			return errors.New("accounts.CacheAccount is not set")
 		}
 		if inst.AccountMetaSlice[2] == nil {
 			return errors.New("accounts.Internal is not set")
@@ -212,8 +220,8 @@ func (inst *ValidateEventInstruction) EncodeToTree(parent ag_treeout.Branches) {
 
 					// Accounts of the instruction:
 					instructionBranch.Child("Accounts[len=4]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("      cache_", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("   authority", inst.AccountMetaSlice.Get(1)))
+						accountsBranch.Child(ag_format.Meta("   authority", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("      cache_", inst.AccountMetaSlice.Get(1)))
 						accountsBranch.Child(ag_format.Meta("    internal", inst.AccountMetaSlice.Get(2)))
 						accountsBranch.Child(ag_format.Meta("instructions", inst.AccountMetaSlice.Get(3)))
 					})
@@ -231,13 +239,13 @@ func (obj *ValidateEventInstruction) UnmarshalWithDecoder(decoder *ag_binary.Dec
 // NewValidateEventInstruction declares a new ValidateEvent instruction with the provided parameters and accounts.
 func NewValidateEventInstruction(
 	// Accounts:
-	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
+	cacheAccount ag_solanago.PublicKey,
 	internal ag_solanago.PublicKey,
 	instructions ag_solanago.PublicKey) *ValidateEventInstruction {
 	return NewValidateEventInstructionBuilder().
-		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).
+		SetCacheAccount(cacheAccount).
 		SetInternalAccount(internal).
 		SetInstructionsAccount(instructions)
 }

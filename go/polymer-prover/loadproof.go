@@ -14,9 +14,10 @@ import (
 type LoadProofInstruction struct {
 	ProofChunk *[]byte
 
-	// [0] = [WRITE] cache_account
+	// [0] = [WRITE, SIGNER] authority
+	// ··········· user will be the owner of the pda account
 	//
-	// [1] = [WRITE, SIGNER] authority
+	// [1] = [WRITE] cache_account
 	//
 	// [2] = [] system_program
 	ag_solanago.AccountMetaSlice `bin:"-"`
@@ -37,14 +38,29 @@ func (inst *LoadProofInstruction) SetProofChunk(proof_chunk []byte) *LoadProofIn
 	return inst
 }
 
+// SetAuthorityAccount sets the "authority" account.
+// user will be the owner of the pda account
+func (inst *LoadProofInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *LoadProofInstruction {
+	inst.AccountMetaSlice[0] = ag_solanago.Meta(authority).WRITE().SIGNER()
+	return inst
+}
+
+// GetAuthorityAccount gets the "authority" account.
+// user will be the owner of the pda account
+func (inst *LoadProofInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
+	return inst.AccountMetaSlice.Get(0)
+}
+
 // SetCacheAccount sets the "cache_account" account.
 func (inst *LoadProofInstruction) SetCacheAccount(cacheAccount ag_solanago.PublicKey) *LoadProofInstruction {
-	inst.AccountMetaSlice[0] = ag_solanago.Meta(cacheAccount).WRITE()
+	inst.AccountMetaSlice[1] = ag_solanago.Meta(cacheAccount).WRITE()
 	return inst
 }
 
 func (inst *LoadProofInstruction) findFindCacheAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
+	// const: cache
+	seeds = append(seeds, []byte{byte(0x63), byte(0x61), byte(0x63), byte(0x68), byte(0x65)})
 	// path: authority
 	seeds = append(seeds, authority.Bytes())
 
@@ -87,17 +103,6 @@ func (inst *LoadProofInstruction) MustFindCacheAddress(authority ag_solanago.Pub
 
 // GetCacheAccount gets the "cache_account" account.
 func (inst *LoadProofInstruction) GetCacheAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(0)
-}
-
-// SetAuthorityAccount sets the "authority" account.
-func (inst *LoadProofInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *LoadProofInstruction {
-	inst.AccountMetaSlice[1] = ag_solanago.Meta(authority).WRITE().SIGNER()
-	return inst
-}
-
-// GetAuthorityAccount gets the "authority" account.
-func (inst *LoadProofInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(1)
 }
 
@@ -140,10 +145,10 @@ func (inst *LoadProofInstruction) Validate() error {
 	// Check whether all (required) accounts are set:
 	{
 		if inst.AccountMetaSlice[0] == nil {
-			return errors.New("accounts.CacheAccount is not set")
+			return errors.New("accounts.Authority is not set")
 		}
 		if inst.AccountMetaSlice[1] == nil {
-			return errors.New("accounts.Authority is not set")
+			return errors.New("accounts.CacheAccount is not set")
 		}
 		if inst.AccountMetaSlice[2] == nil {
 			return errors.New("accounts.SystemProgram is not set")
@@ -167,8 +172,8 @@ func (inst *LoadProofInstruction) EncodeToTree(parent ag_treeout.Branches) {
 
 					// Accounts of the instruction:
 					instructionBranch.Child("Accounts[len=3]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("        cache_", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(1)))
+						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("        cache_", inst.AccountMetaSlice.Get(1)))
 						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(2)))
 					})
 				})
@@ -197,12 +202,12 @@ func NewLoadProofInstruction(
 	// Parameters:
 	proof_chunk []byte,
 	// Accounts:
-	cacheAccount ag_solanago.PublicKey,
 	authority ag_solanago.PublicKey,
+	cacheAccount ag_solanago.PublicKey,
 	systemProgram ag_solanago.PublicKey) *LoadProofInstruction {
 	return NewLoadProofInstructionBuilder().
 		SetProofChunk(proof_chunk).
-		SetCacheAccount(cacheAccount).
 		SetAuthorityAccount(authority).
+		SetCacheAccount(cacheAccount).
 		SetSystemProgramAccount(systemProgram)
 }
