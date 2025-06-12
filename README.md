@@ -161,3 +161,22 @@ the program keypair is a single use private key that once the program is deploye
 
 We are storing it under `keypair` and might include it in the releases. This will help going through the initial
 deployments.
+
+
+# initialization
+
+Once the program is deployed, it needs to be initialized. This is done by calling the `Initialize` instruction.
+This instruction will create the internal accounts needed by the program to function - ie validate proofs.
+Also, note that we need to sign the instruction with the program keypair to prevent front-running attacks.
+You can do that with the `proverctl` tool:
+
+```bash
+./target/release/proverctl \
+    --cluster https://api.devnet.solana.com \
+    --keypair-path /path/to/your/keypair.json \
+    --program-keypair /path/to/your/program-keypair.json \
+    initialize \
+    --client-type 'client_type' \
+    --signer-addr '0xYourSignerAddress' \
+    --peptide-chain-id 'peptide_chain_id' \
+```

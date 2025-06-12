@@ -11,7 +11,7 @@ use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signature::Keypair,
+    signature::{read_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
 };
@@ -19,21 +19,20 @@ use solana_transaction_status_client_types::{EncodedConfirmedTransactionWithStat
 use std::time::Duration;
 
 pub struct Client {
-    pub program_id: Pubkey,
+    pub program: Keypair,
     pub client: RpcClient,
     pub payer: Keypair,
 }
 
 impl Client {
-    pub fn new(program_id: Pubkey, payer: Keypair, cluster: &str) -> Result<Self> {
+    pub fn new(program_keypair: String, payer: Keypair, cluster: &str) -> Result<Self> {
+        let program =
+            read_keypair_file(program_keypair).map_err(|e| anyhow::anyhow!("Failed to read keypair: {}", e))?;
+
         let client = RpcClient::new(cluster.to_string());
-        info!("PROGRAM_ID: {}", program_id.to_string());
+        info!("PROGRAM_ID: {}", program.pubkey().to_string());
         info!("PAYER: {}", payer.pubkey());
-        Ok(Client {
-            program_id,
-            payer,
-            client,
-        })
+        Ok(Client { program, payer, client })
     }
 
     pub fn send_initialize(&self, client_type: &String, signer_addr: &String, peptide_chain_id: u64) -> Result<()> {
@@ -42,18 +41,19 @@ impl Client {
             signer_addr: EthAddress::from_hex(signer_addr.as_str()).as_bytes().clone(),
             peptide_chain_id,
         };
-        let (internal_account, _) = Pubkey::find_program_address(&[b"internal"], &self.program_id);
+        let (internal_account, _) = Pubkey::find_program_address(&[b"internal"], &self.program.pubkey());
         let instruction = Instruction {
-            program_id: self.program_id,
+            program_id: self.program.pubkey(),
             data: Initialize::data(&data),
             accounts: vec![
                 AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.program.pubkey(), true),
                 AccountMeta::new(internal_account, false),
                 AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             ],
         };
 
-        let tx = self.send_tx(instruction)?;
+        let tx = self.send_tx(instruction, &[&self.program])?;
         self.show_tx_logs(tx);
         Ok(())
     }
@@ -61,7 +61,7 @@ impl Client {
     pub fn send_clear_cache(&self) -> Result<()> {
         let cache_account = self.find_cache_account();
         let instruction = Instruction {
-            program_id: self.program_id,
+            program_id: self.program.pubkey(),
             data: ClearProofCache.data(),
             accounts: vec![
                 AccountMeta::new(self.payer.pubkey(), true),
@@ -70,7 +70,7 @@ impl Client {
             ],
         };
 
-        let tx = self.send_tx(instruction)?;
+        let tx = self.send_tx(instruction, &[])?;
         self.show_tx_logs(tx);
         Ok(())
     }
@@ -78,7 +78,7 @@ impl Client {
     pub fn send_create_accounts(&self) -> Result<()> {
         let cache_account = self.find_cache_account();
         let instruction = Instruction {
-            program_id: self.program_id,
+            program_id: self.program.pubkey(),
             data: CreateAccounts.data(),
             accounts: vec![
                 AccountMeta::new(self.payer.pubkey(), true),
@@ -87,13 +87,14 @@ impl Client {
             ],
         };
 
-        let tx = self.send_tx(instruction)?;
+        let tx = self.send_tx(instruction, &[])?;
         self.show_tx_logs(tx);
         Ok(())
     }
 
     fn find_cache_account(&self) -> Pubkey {
-        let (account, _) = Pubkey::find_program_address(&[b"cache", self.payer.pubkey().as_ref()], &self.program_id);
+        let (account, _) =
+            Pubkey::find_program_address(&[b"cache", self.payer.pubkey().as_ref()], &self.program.pubkey());
         info!("CACHE: {}", account);
         account
     }
@@ -110,14 +111,18 @@ impl Client {
         }
     }
 
-    fn send_tx(&self, instruction: Instruction) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
+    fn send_tx(
+        &self,
+        instruction: Instruction,
+        extra_signers: &[&Keypair],
+    ) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
         let recent_blockhash = self.client.get_latest_blockhash()?;
-        let tx = Transaction::new_signed_with_payer(
-            &[instruction],
-            Some(&self.payer.pubkey()),
-            &[&self.payer],
-            recent_blockhash,
-        );
+        let signers = vec![&self.payer]
+            .into_iter()
+            .chain(extra_signers.iter().cloned())
+            .collect::<Vec<&Keypair>>();
+        let tx =
+            Transaction::new_signed_with_payer(&[instruction], Some(&self.payer.pubkey()), &signers, recent_blockhash);
 
         info!("sending transaction...");
         let config = RpcSendTransactionConfig {

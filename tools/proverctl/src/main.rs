@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{read_keypair_file, Keypair};
 use std::env;
 
@@ -35,8 +34,9 @@ struct Cli {
     #[arg(long, default_value = "")]
     keypair: String,
 
-    #[arg(long)]
-    program_id: Pubkey,
+    /// Path to the program keypair file
+    #[arg(long, default_value = "")]
+    program_keypair: String,
 }
 
 #[derive(Subcommand)]
@@ -69,7 +69,7 @@ fn main() -> Result<()> {
         read_keypair_file(cli.keypair_path).map_err(|e| anyhow::anyhow!("Failed to read keypair: {}", e))?
     };
 
-    let client = Client::new(cli.program_id, signer, &cli.cluster)?;
+    let client = Client::new(cli.program_keypair, signer, &cli.cluster)?;
     match &cli.command {
         Commands::Initialize {
             client_type,

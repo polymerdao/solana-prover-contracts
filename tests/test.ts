@@ -34,6 +34,8 @@ describe("localnet", () => {
   const signerAddress = Buffer.from('8D3921B96A3815F403Fb3a4c7fF525969d16f9E0', 'hex');
   const peptideChainId = new anchor.BN(901);
 
+  const programKeypairFile: string = process.env.PROGRAM_KEYPAIR_FILE ?? "target/deploy/polymer_prover-keypair.json";
+
   before(async () => {
     console.log(`WALLET:            ${wallet.publicKey.toBase58()}`)
     console.log(`POLYMER PROVER ID: ${program.programId}`)
@@ -67,11 +69,13 @@ describe("localnet", () => {
   // see https://solana.com/developers/courses/program-security/reinitialization-attacks#summary
   it("fails to re-initialize with different authority", async () => {
     const newOwner = await generateAndFundNewSigner()
+    const programKey = Uint8Array.from(JSON.parse(fs.readFileSync(programKeypairFile, { encoding: 'utf-8' })));
+    const programPair = Keypair.fromSecretKey(programKey);
 
     try {
       const sig = await program.methods.initialize("", Array.from([0]), new anchor.BN(1))
         .accounts({ authority: newOwner.publicKey })
-        .signers([newOwner])
+        .signers([newOwner, programPair])
         .rpc(confirmOptions);
 
       const tx = await provider.connection.getTransaction(sig, {
@@ -526,7 +530,7 @@ describe("localnet", () => {
 
   function runProverCtl(...args: string[]): string {
     try {
-      args = ['--program-id', program.programId.toString(), ...args]
+      args = ['--program-keypair', programKeypairFile, ...args]
       const output = execSync(`cargo run --quiet --bin proverctl -- ${args.join(' ')} 2>&1`)
       return output.toString()
     } catch (err: any) {

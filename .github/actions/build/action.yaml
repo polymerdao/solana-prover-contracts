@@ -6,6 +6,10 @@ inputs:
     description: 'github token to update the git config and allow accessing private repos'
     required: true
     type: string
+  program_keypair:
+    description: 'program keypair content to sign transactions within tests'
+    required: true
+    type: string
   program_keypair_devnet:
     description: 'program keypair content for devnet release binary. leave empty to avoid building it'
     required: false
@@ -74,7 +78,11 @@ runs:
       run: |
         . ./scripts/solana.sh
         . ./scripts/anchor.sh
+        # set up the keypair file to be used by proverctl to call into init
+        echo -n '${{ inputs.program_keypair }}' > "$PROGRAM_KEYPAIR_FILE"
         ./scripts/ci.sh
+      env:
+          PROGRAM_KEYPAIR_FILE: /tmp/program-keypair.json
 
     # since it's a bit of a pain to set up the toolchain, let's try to reuse it to build the "release" artefacts
     - name: Build devnet release
