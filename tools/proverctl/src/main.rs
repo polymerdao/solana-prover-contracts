@@ -53,6 +53,7 @@ enum Commands {
     },
     ClearCache,
     CreateAccounts,
+    CloseAccounts,
 }
 
 fn main() -> Result<()> {
@@ -78,6 +79,7 @@ fn main() -> Result<()> {
         } => client.send_initialize(client_type, signer_addr, *peptide_chain_id)?,
         Commands::ClearCache => client.send_clear_cache()?,
         Commands::CreateAccounts => client.send_create_accounts()?,
+        Commands::CloseAccounts => client.send_close_accounts()?,
     }
 
     Ok(())
