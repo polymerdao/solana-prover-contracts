@@ -1,7 +1,6 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{program::get_return_data, sysvar};
 use borsh::BorshDeserialize;
 use polymer_prover::program::PolymerProver;
 
@@ -25,9 +24,13 @@ pub struct CallLoadProof<'info> {
 #[derive(Accounts)]
 #[instruction()]
 pub struct CallValidateEvent<'info> {
-    /// CHECK: PDA will be created in the callee if needed
+    /// CHECK: pda that stores the proof chunks
     #[account(mut)]
     pub cache_account: AccountInfo<'info>,
+
+    /// CHECK: pda that stores the validation result
+    #[account(mut)]
+    pub result_account: Account<'info, polymer_prover::ValidationResultAccount>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -37,9 +40,6 @@ pub struct CallValidateEvent<'info> {
 
     /// CHECK: PDA will be created in the callee if needed
     pub internal: UncheckedAccount<'info>,
-    /// CHECK: PDA will be created in the callee if needed
-    #[account(address = sysvar::instructions::ID)]
-    pub instructions: UncheckedAccount<'info>,
 }
 
 /// this simple program is meant to be used only for testing the CPI capabilities of our
@@ -55,7 +55,6 @@ pub mod cpi_client {
     use hex::FromHex;
     use polymer_prover::cpi::accounts::LoadProof as PolymerLoadProof;
     use polymer_prover::cpi::accounts::ValidateEvent as PolymerValidateEvent;
-    use polymer_prover::instructions::validate_event::ValidateEventResult;
 
     // load the proof here for simplicity
     const PROOF_HEX: &str = include_str!("../../polymer-prover/src/instructions/test-data/op-proof-v2.hex");
@@ -85,28 +84,24 @@ pub mod cpi_client {
         polymer_prover::cpi::validate_event(CpiContext::new(
             ctx.accounts.polymer_prover.to_account_info(),
             PolymerValidateEvent {
-                cache_account: ctx.accounts.cache_account.to_account_info(),
                 authority: ctx.accounts.authority.to_account_info(),
+                cache_account: ctx.accounts.cache_account.to_account_info(),
+                result_account: ctx.accounts.result_account.to_account_info(),
                 internal: ctx.accounts.internal.to_account_info(),
-                instructions: ctx.accounts.instructions.to_account_info(),
             },
         ))?;
 
-        let (pid, data) = get_return_data().ok_or(ErrorCode::MissingReturn)?;
-        require_keys_eq!(pid, polymer_prover::ID, ErrorCode::WrongProgram);
-
-        let result = ValidateEventResult::try_from_slice(&data)?;
-        match result {
-            ValidateEventResult::Valid(chain_id, event) => {
-                // don't bother emitting all the parsed event. Just print something here so we can
-                // assert on the test
-                msg!(
-                    "proof validated: chain_id: {}, emitting_contract: {}",
-                    chain_id,
-                    event.emitting_contract.to_hex()
-                )
-            }
-            _ => msg!("prover returned error: {}", result),
+        ctx.accounts.result_account.reload()?;
+        if ctx.accounts.result_account.is_valid {
+            // don't bother emitting all the parsed event. Just print something here so we can
+            // assert on the test
+            msg!(
+                "proof validated: chain_id: {}, emitting_contract: 0x{}",
+                ctx.accounts.result_account.chain_id,
+                hex::encode(&ctx.accounts.result_account.emitting_contract)
+            )
+        } else {
+            msg!("prover returned error: {}", ctx.accounts.result_account.error_message);
         }
 
         Ok(())

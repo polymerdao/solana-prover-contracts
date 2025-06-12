@@ -89,14 +89,35 @@ func (obj *ProofCacheAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (
 	return nil
 }
 
-type ValidateEventEvent struct {
-	ChainId          uint32
+type ValidationResultAccount struct {
+	// whether the proof is valid or not
+	IsValid bool
+
+	// error message if the proof is not valid
+	ErrorMessage string
+
+	// the chain ID of the event that was validated
+	ChainId uint32
+
+	// the emitting contract address that emitted the event
 	EmittingContract [20]uint8
 	Topics           []byte
-	UnindexedData    []byte
+
+	// the unindexed data of the event that was validated
+	UnindexedData []byte
 }
 
-func (obj ValidateEventEvent) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj ValidationResultAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `IsValid` param:
+	err = encoder.Encode(obj.IsValid)
+	if err != nil {
+		return err
+	}
+	// Serialize `ErrorMessage` param:
+	err = encoder.Encode(obj.ErrorMessage)
+	if err != nil {
+		return err
+	}
 	// Serialize `ChainId` param:
 	err = encoder.Encode(obj.ChainId)
 	if err != nil {
@@ -120,7 +141,17 @@ func (obj ValidateEventEvent) MarshalWithEncoder(encoder *ag_binary.Encoder) (er
 	return nil
 }
 
-func (obj *ValidateEventEvent) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *ValidationResultAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `IsValid`:
+	err = decoder.Decode(&obj.IsValid)
+	if err != nil {
+		return err
+	}
+	// Deserialize `ErrorMessage`:
+	err = decoder.Decode(&obj.ErrorMessage)
+	if err != nil {
+		return err
+	}
 	// Deserialize `ChainId`:
 	err = decoder.Decode(&obj.ChainId)
 	if err != nil {

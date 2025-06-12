@@ -19,16 +19,19 @@ type CreateAccountsInstruction struct {
 	// ··········· it this way because the proof is too large to be passed as an argument to the instruction
 	// ··········· itself thanks to the transaction size limit.
 	//
-	// [2] = [] system_program
+	// [2] = [WRITE] result_account
+	// ··········· because the result may be too large to be emitted as an event or through the return data
+	//
+	// [3] = [] system_program
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
 // NewCreateAccountsInstructionBuilder creates a new `CreateAccountsInstruction` instruction builder.
 func NewCreateAccountsInstructionBuilder() *CreateAccountsInstruction {
 	nd := &CreateAccountsInstruction{
-		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
+		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
 	}
-	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
+	nd.AccountMetaSlice[3] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
 	return nd
 }
 
@@ -102,15 +105,72 @@ func (inst *CreateAccountsInstruction) GetCacheAccount() *ag_solanago.AccountMet
 	return inst.AccountMetaSlice.Get(1)
 }
 
+// SetResultAccount sets the "result_account" account.
+// because the result may be too large to be emitted as an event or through the return data
+func (inst *CreateAccountsInstruction) SetResultAccount(resultAccount ag_solanago.PublicKey) *CreateAccountsInstruction {
+	inst.AccountMetaSlice[2] = ag_solanago.Meta(resultAccount).WRITE()
+	return inst
+}
+
+func (inst *CreateAccountsInstruction) findFindResultAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+	var seeds [][]byte
+	// const: result
+	seeds = append(seeds, []byte{byte(0x72), byte(0x65), byte(0x73), byte(0x75), byte(0x6c), byte(0x74)})
+	// path: authority
+	seeds = append(seeds, authority.Bytes())
+
+	if knownBumpSeed != 0 {
+		seeds = append(seeds, []byte{byte(bumpSeed)})
+		pda, err = ag_solanago.CreateProgramAddress(seeds, ProgramID)
+	} else {
+		pda, bumpSeed, err = ag_solanago.FindProgramAddress(seeds, ProgramID)
+	}
+	return
+}
+
+// FindResultAddressWithBumpSeed calculates ResultAccount account address with given seeds and a known bump seed.
+func (inst *CreateAccountsInstruction) FindResultAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+	pda, _, err = inst.findFindResultAddress(authority, bumpSeed)
+	return
+}
+
+func (inst *CreateAccountsInstruction) MustFindResultAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
+	pda, _, err := inst.findFindResultAddress(authority, bumpSeed)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// FindResultAddress finds ResultAccount account address with given seeds.
+func (inst *CreateAccountsInstruction) FindResultAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+	pda, bumpSeed, err = inst.findFindResultAddress(authority, 0)
+	return
+}
+
+func (inst *CreateAccountsInstruction) MustFindResultAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
+	pda, _, err := inst.findFindResultAddress(authority, 0)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// GetResultAccount gets the "result_account" account.
+// because the result may be too large to be emitted as an event or through the return data
+func (inst *CreateAccountsInstruction) GetResultAccount() *ag_solanago.AccountMeta {
+	return inst.AccountMetaSlice.Get(2)
+}
+
 // SetSystemProgramAccount sets the "system_program" account.
 func (inst *CreateAccountsInstruction) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *CreateAccountsInstruction {
-	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
+	inst.AccountMetaSlice[3] = ag_solanago.Meta(systemProgram)
 	return inst
 }
 
 // GetSystemProgramAccount gets the "system_program" account.
 func (inst *CreateAccountsInstruction) GetSystemProgramAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(2)
+	return inst.AccountMetaSlice.Get(3)
 }
 
 func (inst CreateAccountsInstruction) Build() *Instruction {
@@ -140,6 +200,9 @@ func (inst *CreateAccountsInstruction) Validate() error {
 			return errors.New("accounts.CacheAccount is not set")
 		}
 		if inst.AccountMetaSlice[2] == nil {
+			return errors.New("accounts.ResultAccount is not set")
+		}
+		if inst.AccountMetaSlice[3] == nil {
 			return errors.New("accounts.SystemProgram is not set")
 		}
 	}
@@ -158,10 +221,11 @@ func (inst *CreateAccountsInstruction) EncodeToTree(parent ag_treeout.Branches) 
 					instructionBranch.Child("Params[len=0]").ParentFunc(func(paramsBranch ag_treeout.Branches) {})
 
 					// Accounts of the instruction:
-					instructionBranch.Child("Accounts[len=3]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
+					instructionBranch.Child("Accounts[len=4]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
 						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(0)))
 						accountsBranch.Child(ag_format.Meta("        cache_", inst.AccountMetaSlice.Get(1)))
-						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(2)))
+						accountsBranch.Child(ag_format.Meta("       result_", inst.AccountMetaSlice.Get(2)))
+						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(3)))
 					})
 				})
 		})
@@ -179,9 +243,11 @@ func NewCreateAccountsInstruction(
 	// Accounts:
 	authority ag_solanago.PublicKey,
 	cacheAccount ag_solanago.PublicKey,
+	resultAccount ag_solanago.PublicKey,
 	systemProgram ag_solanago.PublicKey) *CreateAccountsInstruction {
 	return NewCreateAccountsInstructionBuilder().
 		SetAuthorityAccount(authority).
 		SetCacheAccount(cacheAccount).
+		SetResultAccount(resultAccount).
 		SetSystemProgramAccount(systemProgram)
 }

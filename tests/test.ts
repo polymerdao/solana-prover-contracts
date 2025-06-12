@@ -97,7 +97,7 @@ describe("localnet", () => {
   // it checks that the program accepts proofs in chunks and temporarily stores them in a PDA account.
   // Once all the chunks have been sent, it runs the actual event validation
   it("validates event", async () => {
-    const newSigner = wallet.payer // await generateAndFundNewSigner()
+    const newSigner = await generateAndFundNewSigner()
 
     await program.methods
       .loadProof(proof.subarray(0, 800))
@@ -139,7 +139,8 @@ describe("localnet", () => {
 
     txs.forEach((t) => console.log(t.meta.logMessages))
 
-    checkValidatEventResult(11_155_420, 'op-event-v2.json', ...txs)
+    assert.ok(findLogMessage('proof is valid', ...txs))
+    await checkValidatationResult(newSigner, 11_155_420, 'op-event-v2.json')
   });
 
 
@@ -231,8 +232,11 @@ describe("localnet", () => {
 
     txs.forEach((t) => console.log(t.meta.logMessages))
 
-    checkValidatEventResult(11_155_420, 'op-event-v2.json', txs.at(-2))
-    checkValidatEventResult(11_155_420, 'op-event-v2.json', txs.at(-1))
+    assert.ok(findLogMessage('proof is valid', txs.at(-2)))
+    checkValidatationResult(user0, 11_155_420, 'op-event-v2.json')
+
+    assert.ok(findLogMessage('proof is valid', txs.at(-1)))
+    checkValidatationResult(user1, 11_155_420, 'op-event-v2.json')
   });
 
   // calls validate event with invalid input, causing the cache to be cleared and then calls it again with
@@ -258,10 +262,23 @@ describe("localnet", () => {
       commitment: "confirmed",
     });
 
+    txs0.forEach((t) => console.log(t.meta.logMessages))
+
     // since we are sending two an incomplete proof, we expect the event validation to fail like so
     assert.ok(txs0.find((tx: VersionedTransactionResponse) => tx.meta.logMessages.find((log: string) =>
       log.endsWith("invalid membership proof: can't read path")
     )))
+
+    // make sure the result account contains the expected error
+    const resultAccount = findProgramAddress([Buffer.from("result"), newSigner.publicKey.toBuffer()], program.programId);
+    const result = await program.account.validationResultAccount.fetch(resultAccount, "confirmed")
+    assert.isFalse(result.isValid)
+    assert.equal(result.errorMessage, "invalid membership proof: can't read path");
+    assert.equal(result.chainId, 0);
+    assert.equal(Buffer.from(result.emittingContract).toString('hex'), '0000000000000000000000000000000000000000');
+    assert.equal(result.topics.length, 0);
+    assert.equal(result.unindexedData.length, 0);
+
 
     // at this point the PDA cache account should be clear, so calling valide event again with valid inputs should
     // works as expected
@@ -289,7 +306,9 @@ describe("localnet", () => {
     });
 
     txs.forEach((t) => console.log(t.meta.logMessages))
-    checkValidatEventResult(11_155_420, 'op-event-v2.json', ...txs)
+
+    assert.ok(findLogMessage('proof is valid', ...txs))
+    checkValidatationResult(newSigner, 11_155_420, 'op-event-v2.json')
   });
 
 
@@ -391,6 +410,7 @@ describe("localnet", () => {
   it("support cpi calls", async () => {
     const newSigner = await generateAndFundNewSigner()
     const cacheAccount = findProgramAddress([Buffer.from("cache"), newSigner.publicKey.toBuffer()], program.programId);
+    const resultAccount = findProgramAddress([Buffer.from("result"), newSigner.publicKey.toBuffer()], program.programId);
 
     await cpiclient.methods
       .callLoadProof()
@@ -408,6 +428,7 @@ describe("localnet", () => {
         authority: newSigner.publicKey,
         cacheAccount: cacheAccount,
         internal: findProgramAddress([Buffer.from("internal")], program.programId),
+        resultAccount: resultAccount,
       })
       .signers([newSigner])
       .rpc(confirmOptions)
@@ -461,9 +482,10 @@ describe("localnet", () => {
     return address
   }
 
-  function checkValidatEventResult(chainId: number, eventFileName: string, ...txs: VersionedTransactionResponse[]) {
-    const result = findEvent('validateEventEvent', ...txs)
-    assert.ok(result)
+  async function checkValidatationResult(signer: Keypair, chainId: number, eventFileName: string) {
+    const resultAccount = findProgramAddress([Buffer.from("result"), signer.publicKey.toBuffer()], program.programId);
+    const result = await program.account.validationResultAccount.fetch(resultAccount, "confirmed")
+    assert.isTrue(result.isValid)
 
     let topics = Buffer.alloc(0);
     const expectedEvent = readEventFile(eventFileName)
@@ -507,17 +529,6 @@ describe("localnet", () => {
     return signer
   }
 
-  function findEvent(name: string, ...txs: VersionedTransactionResponse[]): any {
-    const eventParser = new anchor.EventParser(program.programId, program.coder);
-    for (const tx of txs) {
-      if (tx.meta === undefined || tx.meta.logMessages == undefined) continue
-      for (const event of eventParser.parseLogs(tx.meta.logMessages)) {
-        if (event.name === name) return event.data
-      }
-    }
-    throw Error(`event ${name} not found`)
-  }
-
   function findLogMessage(needle: string, ...txs: VersionedTransactionResponse[]): string {
     for (const tx of txs) {
       if (tx.meta === undefined || tx.meta.logMessages == undefined) continue
@@ -525,7 +536,7 @@ describe("localnet", () => {
         if (logMessage.includes(needle)) return logMessage
       }
     }
-    throw Error(`string ${needle} not found`)
+    throw Error(`string '${needle}' not found`)
   }
 
   function runProverCtl(...args: string[]): string {
