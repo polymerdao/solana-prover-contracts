@@ -7,5 +7,4 @@ import ag_solanago "github.com/gagliardetto/solana-go"
 var Addresses = map[string]ag_solanago.PublicKey{
 	"11111111111111111111111111111111":             ag_solanago.MustPublicKeyFromBase58("11111111111111111111111111111111"),
 	"FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3": ag_solanago.MustPublicKeyFromBase58("FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"),
-	"Sysvar1nstructions1111111111111111111111111":  ag_solanago.MustPublicKeyFromBase58("Sysvar1nstructions1111111111111111111111111"),
 }

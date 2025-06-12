@@ -55,10 +55,10 @@ install-solana-anchor-go:
 
 # the weird argument is passed down to ts-mocha and it selects one test... there's no clean way of doing it
 # so, this runs the before() step and the selected test, which means anchor will deploy our program and initialize it
-# the --detach flag leaves the local node running
-.PHONY: localnet
-localnet:
-	anchor test "\-\-grep 'internal accounts are set after init'" --detach
+# the local validator is not started, so it means you have to run it manually
+.PHONY: deploy-localnet
+deploy-localnet:
+	anchor test --skip-local-validator "\-\-grep 'internal accounts are set after init'"
 
 
 # this will be the new version. Use with `make upgrade-version VERSION=0.0.1`

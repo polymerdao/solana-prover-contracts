@@ -18,11 +18,10 @@ type ValidateEventInstruction struct {
 	// [1] = [WRITE] cache_account
 	// ··········· LoadProof instruction
 	//
-	// [2] = [] internal
-	// ··········· which are unique to the program instance and required to validate the proof
+	// [2] = [WRITE] result_account
 	//
-	// [3] = [] instructions
-	// ··········· CPI
+	// [3] = [] internal
+	// ··········· which are unique to the program instance and required to validate the proof
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
@@ -31,7 +30,6 @@ func NewValidateEventInstructionBuilder() *ValidateEventInstruction {
 	nd := &ValidateEventInstruction{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
 	}
-	nd.AccountMetaSlice[3] = ag_solanago.Meta(Addresses["Sysvar1nstructions1111111111111111111111111"])
 	return nd
 }
 
@@ -103,10 +101,65 @@ func (inst *ValidateEventInstruction) GetCacheAccount() *ag_solanago.AccountMeta
 	return inst.AccountMetaSlice.Get(1)
 }
 
+// SetResultAccount sets the "result_account" account.
+func (inst *ValidateEventInstruction) SetResultAccount(resultAccount ag_solanago.PublicKey) *ValidateEventInstruction {
+	inst.AccountMetaSlice[2] = ag_solanago.Meta(resultAccount).WRITE()
+	return inst
+}
+
+func (inst *ValidateEventInstruction) findFindResultAddress(authority ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+	var seeds [][]byte
+	// const: result
+	seeds = append(seeds, []byte{byte(0x72), byte(0x65), byte(0x73), byte(0x75), byte(0x6c), byte(0x74)})
+	// path: authority
+	seeds = append(seeds, authority.Bytes())
+
+	if knownBumpSeed != 0 {
+		seeds = append(seeds, []byte{byte(bumpSeed)})
+		pda, err = ag_solanago.CreateProgramAddress(seeds, ProgramID)
+	} else {
+		pda, bumpSeed, err = ag_solanago.FindProgramAddress(seeds, ProgramID)
+	}
+	return
+}
+
+// FindResultAddressWithBumpSeed calculates ResultAccount account address with given seeds and a known bump seed.
+func (inst *ValidateEventInstruction) FindResultAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+	pda, _, err = inst.findFindResultAddress(authority, bumpSeed)
+	return
+}
+
+func (inst *ValidateEventInstruction) MustFindResultAddressWithBumpSeed(authority ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
+	pda, _, err := inst.findFindResultAddress(authority, bumpSeed)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// FindResultAddress finds ResultAccount account address with given seeds.
+func (inst *ValidateEventInstruction) FindResultAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+	pda, bumpSeed, err = inst.findFindResultAddress(authority, 0)
+	return
+}
+
+func (inst *ValidateEventInstruction) MustFindResultAddress(authority ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
+	pda, _, err := inst.findFindResultAddress(authority, 0)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+// GetResultAccount gets the "result_account" account.
+func (inst *ValidateEventInstruction) GetResultAccount() *ag_solanago.AccountMeta {
+	return inst.AccountMetaSlice.Get(2)
+}
+
 // SetInternalAccount sets the "internal" account.
 // which are unique to the program instance and required to validate the proof
 func (inst *ValidateEventInstruction) SetInternalAccount(internal ag_solanago.PublicKey) *ValidateEventInstruction {
-	inst.AccountMetaSlice[2] = ag_solanago.Meta(internal)
+	inst.AccountMetaSlice[3] = ag_solanago.Meta(internal)
 	return inst
 }
 
@@ -155,19 +208,6 @@ func (inst *ValidateEventInstruction) MustFindInternalAddress() (pda ag_solanago
 // GetInternalAccount gets the "internal" account.
 // which are unique to the program instance and required to validate the proof
 func (inst *ValidateEventInstruction) GetInternalAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(2)
-}
-
-// SetInstructionsAccount sets the "instructions" account.
-// CPI
-func (inst *ValidateEventInstruction) SetInstructionsAccount(instructions ag_solanago.PublicKey) *ValidateEventInstruction {
-	inst.AccountMetaSlice[3] = ag_solanago.Meta(instructions)
-	return inst
-}
-
-// GetInstructionsAccount gets the "instructions" account.
-// CPI
-func (inst *ValidateEventInstruction) GetInstructionsAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(3)
 }
 
@@ -198,10 +238,10 @@ func (inst *ValidateEventInstruction) Validate() error {
 			return errors.New("accounts.CacheAccount is not set")
 		}
 		if inst.AccountMetaSlice[2] == nil {
-			return errors.New("accounts.Internal is not set")
+			return errors.New("accounts.ResultAccount is not set")
 		}
 		if inst.AccountMetaSlice[3] == nil {
-			return errors.New("accounts.Instructions is not set")
+			return errors.New("accounts.Internal is not set")
 		}
 	}
 	return nil
@@ -220,10 +260,10 @@ func (inst *ValidateEventInstruction) EncodeToTree(parent ag_treeout.Branches) {
 
 					// Accounts of the instruction:
 					instructionBranch.Child("Accounts[len=4]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("   authority", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("      cache_", inst.AccountMetaSlice.Get(1)))
-						accountsBranch.Child(ag_format.Meta("    internal", inst.AccountMetaSlice.Get(2)))
-						accountsBranch.Child(ag_format.Meta("instructions", inst.AccountMetaSlice.Get(3)))
+						accountsBranch.Child(ag_format.Meta("authority", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("   cache_", inst.AccountMetaSlice.Get(1)))
+						accountsBranch.Child(ag_format.Meta("  result_", inst.AccountMetaSlice.Get(2)))
+						accountsBranch.Child(ag_format.Meta(" internal", inst.AccountMetaSlice.Get(3)))
 					})
 				})
 		})
@@ -241,11 +281,11 @@ func NewValidateEventInstruction(
 	// Accounts:
 	authority ag_solanago.PublicKey,
 	cacheAccount ag_solanago.PublicKey,
-	internal ag_solanago.PublicKey,
-	instructions ag_solanago.PublicKey) *ValidateEventInstruction {
+	resultAccount ag_solanago.PublicKey,
+	internal ag_solanago.PublicKey) *ValidateEventInstruction {
 	return NewValidateEventInstructionBuilder().
 		SetAuthorityAccount(authority).
 		SetCacheAccount(cacheAccount).
-		SetInternalAccount(internal).
-		SetInstructionsAccount(instructions)
+		SetResultAccount(resultAccount).
+		SetInternalAccount(internal)
 }

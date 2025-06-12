@@ -129,3 +129,109 @@ func (obj *ProofCacheAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Dec
 	}
 	return nil
 }
+
+type ValidationResultAccountAccount struct {
+	// whether the proof is valid or not
+	IsValid bool
+
+	// error message if the proof is not valid
+	ErrorMessage string
+
+	// the chain ID of the event that was validated
+	ChainId uint32
+
+	// the emitting contract address that emitted the event
+	EmittingContract [20]uint8
+	Topics           []byte
+
+	// the unindexed data of the event that was validated
+	UnindexedData []byte
+}
+
+var ValidationResultAccountAccountDiscriminator = [8]byte{160, 149, 71, 76, 148, 48, 85, 229}
+
+func (obj ValidationResultAccountAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Write account discriminator:
+	err = encoder.WriteBytes(ValidationResultAccountAccountDiscriminator[:], false)
+	if err != nil {
+		return err
+	}
+	// Serialize `IsValid` param:
+	err = encoder.Encode(obj.IsValid)
+	if err != nil {
+		return err
+	}
+	// Serialize `ErrorMessage` param:
+	err = encoder.Encode(obj.ErrorMessage)
+	if err != nil {
+		return err
+	}
+	// Serialize `ChainId` param:
+	err = encoder.Encode(obj.ChainId)
+	if err != nil {
+		return err
+	}
+	// Serialize `EmittingContract` param:
+	err = encoder.Encode(obj.EmittingContract)
+	if err != nil {
+		return err
+	}
+	// Serialize `Topics` param:
+	err = encoder.Encode(obj.Topics)
+	if err != nil {
+		return err
+	}
+	// Serialize `UnindexedData` param:
+	err = encoder.Encode(obj.UnindexedData)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *ValidationResultAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Read and check account discriminator:
+	{
+		discriminator, err := decoder.ReadTypeID()
+		if err != nil {
+			return err
+		}
+		if !discriminator.Equal(ValidationResultAccountAccountDiscriminator[:]) {
+			return fmt.Errorf(
+				"wrong discriminator: wanted %s, got %s",
+				"[160 149 71 76 148 48 85 229]",
+				fmt.Sprint(discriminator[:]))
+		}
+	}
+	// Deserialize `IsValid`:
+	err = decoder.Decode(&obj.IsValid)
+	if err != nil {
+		return err
+	}
+	// Deserialize `ErrorMessage`:
+	err = decoder.Decode(&obj.ErrorMessage)
+	if err != nil {
+		return err
+	}
+	// Deserialize `ChainId`:
+	err = decoder.Decode(&obj.ChainId)
+	if err != nil {
+		return err
+	}
+	// Deserialize `EmittingContract`:
+	err = decoder.Decode(&obj.EmittingContract)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Topics`:
+	err = decoder.Decode(&obj.Topics)
+	if err != nil {
+		return err
+	}
+	// Deserialize `UnindexedData`:
+	err = decoder.Decode(&obj.UnindexedData)
+	if err != nil {
+		return err
+	}
+	return nil
+}

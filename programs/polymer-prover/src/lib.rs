@@ -1,10 +1,6 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{
-    program::set_return_data, sysvar, sysvar::instructions::load_current_index_checked,
-    sysvar::instructions::load_instruction_at_checked,
-};
 use borsh::BorshDeserialize;
 
 pub mod instructions;
@@ -76,6 +72,14 @@ pub struct ValidateEvent<'info> {
     )]
     pub cache_account: Account<'info, ProofCacheAccount>,
 
+    /// CHECK: the result of the validation will be stored in this account.
+    #[account(
+        mut,
+        seeds = [b"result", authority.key().as_ref()],
+        bump,
+    )]
+    pub result_account: Account<'info, ValidationResultAccount>,
+
     /// CHECK: we need to access the internal account to get the client type and signer address,
     /// which are unique to the program instance and required to validate the proof
     #[account(
@@ -83,11 +87,6 @@ pub struct ValidateEvent<'info> {
         bump,
     )]
     pub internal: Account<'info, InternalAccount>,
-
-    /// CHECK: this is only used to verify whether the program is being called from off-chain or
-    /// CPI
-    #[account(address = sysvar::instructions::ID)]
-    pub instructions: AccountInfo<'info>,
 }
 
 #[account]
@@ -95,6 +94,30 @@ pub struct ValidateEvent<'info> {
 pub struct ProofCacheAccount {
     #[max_len(3000)]
     pub cache: Vec<u8>,
+}
+
+#[account]
+#[derive(InitSpace, Default)]
+pub struct ValidationResultAccount {
+    /// whether the proof is valid or not
+    pub is_valid: bool,
+
+    /// error message if the proof is not valid
+    #[max_len(64)]
+    pub error_message: String,
+
+    /// the chain ID of the event that was validated
+    pub chain_id: u32,
+
+    /// the emitting contract address that emitted the event
+    pub emitting_contract: [u8; 20],
+
+    #[max_len(32 * 4)] // 32 bytes per topic, max 4 topics
+    pub topics: Vec<u8>,
+
+    /// the unindexed data of the event that was validated
+    #[max_len(3000)]
+    pub unindexed_data: Vec<u8>,
 }
 
 #[derive(Accounts)]
@@ -114,6 +137,17 @@ pub struct CreateAccounts<'info> {
         space = DISCRIMINATOR_SIZE + ProofCacheAccount::INIT_SPACE,
     )]
     pub cache_account: Account<'info, ProofCacheAccount>,
+
+    /// CHECK: this is used to store the result of the validation. We have to do it this way
+    /// because the result may be too large to be emitted as an event or through the return data
+    #[account(
+        init,
+        seeds = [b"result", authority.key().as_ref()],
+        bump,
+        payer = authority,
+        space = DISCRIMINATOR_SIZE + ValidationResultAccount::INIT_SPACE,
+    )]
+    pub result_account: Account<'info, ValidationResultAccount>,
 
     // need this to create the pda account
     pub system_program: Program<'info, System>,
@@ -161,14 +195,6 @@ pub mod polymer_prover {
 
     use super::*;
 
-    #[event]
-    pub struct ValidateEventEvent {
-        pub chain_id: u32,
-        pub emitting_contract: [u8; 20],
-        pub topics: Vec<u8>,
-        pub unindexed_data: Vec<u8>,
-    }
-
     pub fn initialize(
         ctx: Context<Initialize>,
         client_type: String,
@@ -176,9 +202,6 @@ pub mod polymer_prover {
         peptide_chain_id: u64,
     ) -> Result<()> {
         let internal = &mut ctx.accounts.internal;
-
-        // TODO validate client type
-        // TODO: check account permissions (see ai conversation)
 
         internal.authority = ctx.accounts.authority.key();
         internal.client_type = client_type;
@@ -223,40 +246,25 @@ pub mod polymer_prover {
 
         msg!("{}", result);
 
-        // Determine if the current instruction is a Cross-Program Invocation (CPI)
-        // by comparing the instruction's program_id to the current program's ID.
-        // If they differ, the instruction was invoked by another program.
-        let is_cpi = {
-            let ix = ctx.accounts.instructions.to_account_info();
-            let index = load_current_index_checked(&ix)? as usize;
-            let current_ix = load_instruction_at_checked(index, &ix)?;
-            current_ix.program_id != *ctx.program_id
-        };
+        // create a new ValidationResultAccount to store the result of the validation
+        let mut out = ValidationResultAccount::default();
 
-        // if we are being called by another program, set the return data so they can pick it up
-        // otherwise (we are being called by an off-chain agent) emit an event for them to parse
-        if is_cpi {
-            set_return_data(&result.try_to_vec()?);
-        } else if let ValidateEventResult::Valid(chain_id, event) = result {
-            emit!(ValidateEventEvent {
-                chain_id,
-                topics: event.topics,
-                emitting_contract: *event.emitting_contract.as_bytes(),
-                unindexed_data: event.unindexed_data,
-            })
+        // if the result is valid, we store the event data in the result account
+        // if the result is invalid, we store the error message in the result account
+        if let ValidateEventResult::Valid(chain_id, event) = result {
+            out.is_valid = true;
+            out.chain_id = chain_id;
+            out.emitting_contract = *event.emitting_contract.as_bytes();
+            out.topics = event.topics.clone();
+            out.unindexed_data = event.unindexed_data.clone();
+        } else {
+            out.is_valid = false;
+            out.error_message = result.to_string();
         }
 
-        //        trace!("clearing cache!");
+        ctx.accounts.result_account.set_inner(out);
         ctx.accounts.cache_account.cache.clear();
 
         Ok(())
     }
-
-    // pub fn parse_event(_ctx: Context<ParseEvent>, event: Vec<u8>, num_topics: usize) -> Result<()> {
-    //     // TODO
-    //     // set_return_data(key.as_bytes());
-    //     // Ok(parse_event::handler(event.as_slice(), num_topics)?)
-    //     Ok(())
-    // }
-    //
 }

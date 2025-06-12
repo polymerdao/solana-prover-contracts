@@ -77,12 +77,14 @@ impl Client {
 
     pub fn send_create_accounts(&self) -> Result<()> {
         let cache_account = self.find_cache_account();
+        let result_account = self.find_result_account();
         let instruction = Instruction {
             program_id: self.program.pubkey(),
             data: CreateAccounts.data(),
             accounts: vec![
                 AccountMeta::new(self.payer.pubkey(), true),
                 AccountMeta::new(cache_account, false),
+                AccountMeta::new(result_account, false),
                 AccountMeta::new_readonly(solana_sdk::system_program::id(), false),
             ],
         };
@@ -96,6 +98,13 @@ impl Client {
         let (account, _) =
             Pubkey::find_program_address(&[b"cache", self.payer.pubkey().as_ref()], &self.program.pubkey());
         info!("CACHE: {}", account);
+        account
+    }
+
+    fn find_result_account(&self) -> Pubkey {
+        let (account, _) =
+            Pubkey::find_program_address(&[b"result", self.payer.pubkey().as_ref()], &self.program.pubkey());
+        info!("RESULT: {}", account);
         account
     }
 
