@@ -10,6 +10,14 @@ polymer_prover = "FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"
 cpi_client = "qTdgaLBq1tWoTx81t3rZ1mDBTdJ7GvyPqnfVxSPv2sz"
 mars = "5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u"
 
+# these need to line up with the real ones based on the keypairs we use in different environments
+# since the initialize instruction will want to be signed by crate::ID
+[programs.devnet]
+polymer_prover = "FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"
+
+[programs.mainnet]
+polymer_prover = "CdvSq48QUukYuMczgZAVNZrwcHNshBdtqrjW26sQiGPs"
+
 [registry]
 url = "https://api.apr.dev"
 

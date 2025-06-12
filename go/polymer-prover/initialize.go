@@ -17,11 +17,15 @@ type InitializeInstruction struct {
 	PeptideChainId *uint64
 
 	// [0] = [WRITE, SIGNER] authority
+	// ··········· require to signatures to prevent initialization frontrunning
 	//
-	// [1] = [WRITE] internal
+	// [1] = [SIGNER] program
+	// ··········· this prevents frontrunning of the initialization
+	//
+	// [2] = [WRITE] internal
 	// ··········· hold the internal fields that need to be used during the proof validation
 	//
-	// [2] = [] system_program
+	// [3] = [] system_program
 	// ··········· required to create the pda account
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
@@ -29,9 +33,10 @@ type InitializeInstruction struct {
 // NewInitializeInstructionBuilder creates a new `InitializeInstruction` instruction builder.
 func NewInitializeInstructionBuilder() *InitializeInstruction {
 	nd := &InitializeInstruction{
-		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 3),
+		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
 	}
-	nd.AccountMetaSlice[2] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
+	nd.AccountMetaSlice[1] = ag_solanago.Meta(Addresses["FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"]).SIGNER()
+	nd.AccountMetaSlice[3] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
 	return nd
 }
 
@@ -54,20 +59,35 @@ func (inst *InitializeInstruction) SetPeptideChainId(peptide_chain_id uint64) *I
 }
 
 // SetAuthorityAccount sets the "authority" account.
+// require to signatures to prevent initialization frontrunning
 func (inst *InitializeInstruction) SetAuthorityAccount(authority ag_solanago.PublicKey) *InitializeInstruction {
 	inst.AccountMetaSlice[0] = ag_solanago.Meta(authority).WRITE().SIGNER()
 	return inst
 }
 
 // GetAuthorityAccount gets the "authority" account.
+// require to signatures to prevent initialization frontrunning
 func (inst *InitializeInstruction) GetAuthorityAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
+}
+
+// SetProgramAccount sets the "program" account.
+// this prevents frontrunning of the initialization
+func (inst *InitializeInstruction) SetProgramAccount(program ag_solanago.PublicKey) *InitializeInstruction {
+	inst.AccountMetaSlice[1] = ag_solanago.Meta(program).SIGNER()
+	return inst
+}
+
+// GetProgramAccount gets the "program" account.
+// this prevents frontrunning of the initialization
+func (inst *InitializeInstruction) GetProgramAccount() *ag_solanago.AccountMeta {
+	return inst.AccountMetaSlice.Get(1)
 }
 
 // SetInternalAccount sets the "internal" account.
 // hold the internal fields that need to be used during the proof validation
 func (inst *InitializeInstruction) SetInternalAccount(internal ag_solanago.PublicKey) *InitializeInstruction {
-	inst.AccountMetaSlice[1] = ag_solanago.Meta(internal).WRITE()
+	inst.AccountMetaSlice[2] = ag_solanago.Meta(internal).WRITE()
 	return inst
 }
 
@@ -116,20 +136,20 @@ func (inst *InitializeInstruction) MustFindInternalAddress() (pda ag_solanago.Pu
 // GetInternalAccount gets the "internal" account.
 // hold the internal fields that need to be used during the proof validation
 func (inst *InitializeInstruction) GetInternalAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(1)
+	return inst.AccountMetaSlice.Get(2)
 }
 
 // SetSystemProgramAccount sets the "system_program" account.
 // required to create the pda account
 func (inst *InitializeInstruction) SetSystemProgramAccount(systemProgram ag_solanago.PublicKey) *InitializeInstruction {
-	inst.AccountMetaSlice[2] = ag_solanago.Meta(systemProgram)
+	inst.AccountMetaSlice[3] = ag_solanago.Meta(systemProgram)
 	return inst
 }
 
 // GetSystemProgramAccount gets the "system_program" account.
 // required to create the pda account
 func (inst *InitializeInstruction) GetSystemProgramAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(2)
+	return inst.AccountMetaSlice.Get(3)
 }
 
 func (inst InitializeInstruction) Build() *Instruction {
@@ -169,9 +189,12 @@ func (inst *InitializeInstruction) Validate() error {
 			return errors.New("accounts.Authority is not set")
 		}
 		if inst.AccountMetaSlice[1] == nil {
-			return errors.New("accounts.Internal is not set")
+			return errors.New("accounts.Program is not set")
 		}
 		if inst.AccountMetaSlice[2] == nil {
+			return errors.New("accounts.Internal is not set")
+		}
+		if inst.AccountMetaSlice[3] == nil {
 			return errors.New("accounts.SystemProgram is not set")
 		}
 	}
@@ -194,10 +217,11 @@ func (inst *InitializeInstruction) EncodeToTree(parent ag_treeout.Branches) {
 					})
 
 					// Accounts of the instruction:
-					instructionBranch.Child("Accounts[len=3]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
+					instructionBranch.Child("Accounts[len=4]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
 						accountsBranch.Child(ag_format.Meta("     authority", inst.AccountMetaSlice.Get(0)))
-						accountsBranch.Child(ag_format.Meta("      internal", inst.AccountMetaSlice.Get(1)))
-						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(2)))
+						accountsBranch.Child(ag_format.Meta("       program", inst.AccountMetaSlice.Get(1)))
+						accountsBranch.Child(ag_format.Meta("      internal", inst.AccountMetaSlice.Get(2)))
+						accountsBranch.Child(ag_format.Meta("system_program", inst.AccountMetaSlice.Get(3)))
 					})
 				})
 		})
@@ -248,6 +272,7 @@ func NewInitializeInstruction(
 	peptide_chain_id uint64,
 	// Accounts:
 	authority ag_solanago.PublicKey,
+	program ag_solanago.PublicKey,
 	internal ag_solanago.PublicKey,
 	systemProgram ag_solanago.PublicKey) *InitializeInstruction {
 	return NewInitializeInstructionBuilder().
@@ -255,6 +280,7 @@ func NewInitializeInstruction(
 		SetSignerAddr(signer_addr).
 		SetPeptideChainId(peptide_chain_id).
 		SetAuthorityAccount(authority).
+		SetProgramAccount(program).
 		SetInternalAccount(internal).
 		SetSystemProgramAccount(systemProgram)
 }

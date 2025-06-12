@@ -22,9 +22,13 @@ declare_id!("FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3");
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    // user will be the owner of the internal account
+    /// require to signatures to prevent initialization frontrunning
     #[account(mut, signer)]
     pub authority: Signer<'info>,
+
+    /// this prevents frontrunning of the initialization
+    #[account(address = crate::ID)]
+    pub program: Signer<'info>,
 
     /// hold the internal fields that need to be used during the proof validation
     #[account(
