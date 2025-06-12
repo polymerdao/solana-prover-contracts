@@ -30,6 +30,8 @@ func init() {
 var (
 	Instruction_ClearProofCache = ag_binary.TypeID([8]byte{201, 199, 110, 50, 133, 117, 40, 35})
 
+	Instruction_CreateAccounts = ag_binary.TypeID([8]byte{94, 175, 109, 170, 173, 11, 25, 176})
+
 	Instruction_Initialize = ag_binary.TypeID([8]byte{175, 175, 109, 31, 13, 152, 155, 237})
 
 	Instruction_LoadProof = ag_binary.TypeID([8]byte{34, 145, 85, 9, 72, 98, 17, 92})
@@ -42,6 +44,8 @@ func InstructionIDToName(id ag_binary.TypeID) string {
 	switch id {
 	case Instruction_ClearProofCache:
 		return "ClearProofCache"
+	case Instruction_CreateAccounts:
+		return "CreateAccounts"
 	case Instruction_Initialize:
 		return "Initialize"
 	case Instruction_LoadProof:
@@ -70,6 +74,9 @@ var InstructionImplDef = ag_binary.NewVariantDefinition(
 	[]ag_binary.VariantType{
 		{
 			Name: "clear_proof_cache", Type: (*ClearProofCacheInstruction)(nil),
+		},
+		{
+			Name: "create_accounts", Type: (*CreateAccountsInstruction)(nil),
 		},
 		{
 			Name: "initialize", Type: (*InitializeInstruction)(nil),

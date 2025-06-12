@@ -72,7 +72,6 @@ pub mod cpi_client {
                 PolymerLoadProof {
                     cache_account: ctx.accounts.cache_account.to_account_info(),
                     authority: ctx.accounts.authority.to_account_info(),
-                    system_program: ctx.accounts.system_program.to_account_info(),
                 },
             ),
             proof,

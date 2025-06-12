@@ -94,14 +94,16 @@ pub struct ProofCacheAccount {
 }
 
 #[derive(Accounts)]
-pub struct LoadProof<'info> {
-    /// user will be the owner of the pda account
+pub struct CreateAccounts<'info> {
+    // user will be the owner of the pda accounts
     #[account(mut, signer)]
     pub authority: Signer<'info>,
 
-    /// CHECK: here's where the proof chunks are stored
+    /// CHECK: this is used to store the chunks of the proof to be validated later. We have to do
+    /// it this way because the proof is too large to be passed as an argument to the instruction
+    /// itself thanks to the transaction size limit.
     #[account(
-        init_if_needed,
+        init,
         seeds = [b"cache", authority.key().as_ref()],
         bump,
         payer = authority,
@@ -111,6 +113,21 @@ pub struct LoadProof<'info> {
 
     // need this to create the pda account
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct LoadProof<'info> {
+    /// user will be the owner of the pda account
+    #[account(mut, signer)]
+    pub authority: Signer<'info>,
+
+    /// CHECK: here's where the proof chunks are stored
+    #[account(
+        mut,
+        seeds = [b"cache", authority.key().as_ref()],
+        bump,
+    )]
+    pub cache_account: Account<'info, ProofCacheAccount>,
 }
 
 #[derive(Accounts)]
@@ -170,6 +187,11 @@ pub mod polymer_prover {
             "signer_addr: {}",
             EthAddress::from_bytes(&internal.signer_addr).to_hex()
         );
+        Ok(())
+    }
+
+    pub fn create_accounts(_ctx: Context<CreateAccounts>) -> Result<()> {
+        msg!("accounts successfully created");
         Ok(())
     }
 

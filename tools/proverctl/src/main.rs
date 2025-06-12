@@ -52,6 +52,7 @@ enum Commands {
         peptide_chain_id: u64,
     },
     ClearCache,
+    CreateAccounts,
 }
 
 fn main() -> Result<()> {
@@ -76,6 +77,7 @@ fn main() -> Result<()> {
             peptide_chain_id,
         } => client.send_initialize(client_type, signer_addr, *peptide_chain_id)?,
         Commands::ClearCache => client.send_clear_cache()?,
+        Commands::CreateAccounts => client.send_create_accounts()?,
     }
 
     Ok(())
