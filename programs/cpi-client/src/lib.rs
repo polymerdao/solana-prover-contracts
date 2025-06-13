@@ -44,7 +44,7 @@ pub struct CallValidateEvent<'info> {
 
 /// this simple program is meant to be used only for testing the CPI capabilities of our
 /// polymer_prover program
-/// It exposes two instrctions: call_load_proof and call_validate_event, that simply call into
+/// It exposes two instructions: call_load_proof and call_validate_event, that simply call into
 /// their cousins on the prover
 /// For simplicity, the proof is loaded into the binary itself and not provided by the caller.
 #[program]
