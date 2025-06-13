@@ -165,6 +165,19 @@ describe("localnet", () => {
 
     const result = await provider.connection.getAccountInfo(resultPda, "confirmed");
     assert.isNull(result, "result account should be closed");
+
+    // now try to create accounts again
+    await program.methods
+      .createAccounts()
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions)
+
+    const cache1 = await provider.connection.getAccountInfo(cachePda, "confirmed");
+    assert.ok(cache1, "cache account should be created again");
+
+    const result1 = await provider.connection.getAccountInfo(resultPda, "confirmed");
+    assert.ok(result1, "result account should be created again");
   });
 
   it("validates event with large proof", async () => {
