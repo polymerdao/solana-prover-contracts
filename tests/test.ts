@@ -167,6 +167,43 @@ describe("localnet", () => {
     assert.isNull(result, "result account should be closed");
   });
 
+  it("validates event with large proof", async () => {
+    const largeProof = readProofFile('arb-proof-v2.hex')
+    console.log(`large proof size: ${largeProof.length}`)
+    console.log(`proof size: ${proof.length}`)
+
+    const newSigner = await generateAndFundNewSigner()
+
+    // loop through the large proof and send it in chunks
+    const maxProofSize = Math.min(largeProof.length, 800);
+    for (let start = 0; start < largeProof.length; start += maxProofSize) {
+      const end = Math.min(start + maxProofSize, largeProof.length);
+      console.log(`loading proof chunk: ${start} - ${end}`)
+      await program.methods
+        .loadProof(largeProof.subarray(start, end))
+        .accounts({ authority: newSigner.publicKey })
+        .signers([newSigner])
+        .rpc(confirmOptions);
+    }
+
+    // now run the actual validation
+    const signature = await program.methods
+      .validateEvent()
+      .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 })])
+      .accounts({ authority: newSigner.publicKey })
+      .signers([newSigner])
+      .rpc(confirmOptions);
+
+    const txs = await provider.connection.getTransactions([signature], {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+
+    txs.forEach((t) => console.log(t.meta.logMessages))
+
+    checkValidatationResult(newSigner, 421614, 'arb-event-v2.json')
+  });
+
 
   // same as previous one but with two concurrent users. The proof is the same in both cases but it is split in
   // different chunks for every user
