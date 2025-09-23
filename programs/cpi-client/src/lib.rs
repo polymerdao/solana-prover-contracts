@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 use borsh::BorshDeserialize;
 use polymer_prover::program::PolymerProver;
 
-declare_id!("qTdgaLBq1tWoTx81t3rZ1mDBTdJ7GvyPqnfVxSPv2sz");
+declare_id!("APg9FEqcm3bWmbY17bMDvUB9RJjnresGRmtKTEBPYv4s");
 
 #[derive(Accounts)]
 #[instruction()]

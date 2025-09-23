@@ -5,18 +5,16 @@ package_manager = "yarn"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-polymer_prover = "FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"
-cpi_client = "qTdgaLBq1tWoTx81t3rZ1mDBTdJ7GvyPqnfVxSPv2sz"
-mars = "5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u"
-
-# these need to line up with the real ones based on the keypairs we use in different environments
-# since the initialize instruction will want to be signed by crate::ID
 [programs.devnet]
 polymer_prover = "FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"
 
+[programs.localnet]
+cpi_client = "APg9FEqcm3bWmbY17bMDvUB9RJjnresGRmtKTEBPYv4s"
+mars = "23XFtwGTK1jSDPjUCWgCfTjFqgTZBdscK9pX2AAi4S1A"
+polymer_prover = "FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"
+
 [programs.mainnet]
-polymer_prover = "CdvSq48QUukYuMczgZAVNZrwcHNshBdtqrjW26sQiGPs"
+polymer_prover = "FhorwWEdorryHaR6x5R4PC15dz3mFWmi9UddSEe8PQeF"
 
 [registry]
 url = "https://api.apr.dev"
@@ -26,4 +24,4 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "bun test ./tests/*"

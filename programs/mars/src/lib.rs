@@ -1,7 +1,7 @@
 #![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
 
-declare_id!("5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u");
+declare_id!("23XFtwGTK1jSDPjUCWgCfTjFqgTZBdscK9pX2AAi4S1A");
 
 const DISCRIMINATOR_SIZE: usize = 8;
 
