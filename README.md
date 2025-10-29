@@ -114,6 +114,33 @@ Now, you can run the same tests against `devnet`
 anchor test --skip-deploy --provider.cluster devnet
 ```
 
+## Upgrading and verifying programs
+
+For verifiable deployments, use Docker builds to ensure deterministic builds:
+
+```bash
+# Build using Docker for deterministic/verifiable builds
+anchor build --verifiable --program-name mars
+
+# Upgrade the program on devnet
+anchor upgrade target/verifiable/mars.so \
+  --program-id 5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u \
+  --provider.cluster devnet
+
+# Initialize the IDL (required for verification, only needed once per program)
+anchor idl init 5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u \
+  --filepath target/idl/mars.json \
+  --provider.cluster devnet
+
+# Verify the deployed program matches your local code
+anchor verify 5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u \
+  --provider.cluster devnet \
+  --program-name mars
+```
+
+Note: Verifiable builds use Docker to create deterministic binaries. Regular builds may produce
+different binaries each time due to timestamps, causing verification to fail.
+
 ## go bindings
 
 We can also generate go bindings with
