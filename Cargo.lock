@@ -1067,7 +1067,6 @@ name = "cpi-client"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
- "bytemuck_derive",
  "hex",
  "mollusk-svm",
  "polymer-prover",
@@ -2984,7 +2983,6 @@ name = "polymer-prover"
 version = "1.0.0"
 dependencies = [
  "anchor-lang",
- "bytemuck_derive",
  "hex",
  "libsecp256k1 0.7.2",
  "mollusk-svm",
