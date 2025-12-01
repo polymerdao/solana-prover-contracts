@@ -3,13 +3,14 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
-      cluster:
-        description: 'Cluster to deploy to'
+      polyenv:
+        description: 'Polymer environment to deploy to'
         required: true
         default: devnet
         type: choice
         options:
-          - mainnet-beta
+          - mainnet
+          - shadownet
           - testnet
           - devnet
       version:
@@ -28,7 +29,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-22.04-16core
-    environment: ${{ inputs.cluster }}
+    environment: ${{ inputs.polyenv }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,17 +39,22 @@ jobs:
       - name: Deploy
         run: |
           # provide the keypairs via these temp files for easier testing
-          if [ "$CLUSTER" = 'devnet' ]; then
+          # we use the dev keypair for our testing (and private) environments and
+          # the main keypair for our public environments (mainnet/testnet)
+          if [ "$POLYMER_ENV" = 'devnet' ] || [ "$POLYMER_ENV" = 'shadownet' ]; then
               echo -n '${{ secrets.PROGRAM_KEYPAIR_DEVNET }}' > "$PROGRAM_KEYPAIR_FILE"
               export TYPE='dev'
           else
               echo -n '${{ secrets.PROGRAM_KEYPAIR_MAIN }}' > "$PROGRAM_KEYPAIR_FILE"
               export TYPE='main'
           fi
+          # the KEYPAIR secret is used for signing the deployment transactions. Note that
+          # even though there's a per env secret, devnet and testnet share the same keypair
+          # as do shadownet and mainnet
           echo -n '${{ secrets.KEYPAIR }}' > "$KEYPAIR_FILE"
           ./scripts/deploy.sh
         env:
-          CLUSTER: ${{ inputs.cluster }}
+          POLYMER_ENV: ${{ inputs.polyenv }}
           VERSION: ${{ inputs.version }}
           KEYPAIR_FILE: /tmp/keypair.json
           PROGRAM_KEYPAIR_FILE: /tmp/program-keypair.json
