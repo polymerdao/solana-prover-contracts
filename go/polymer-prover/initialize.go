@@ -35,7 +35,7 @@ func NewInitializeInstructionBuilder() *InitializeInstruction {
 	nd := &InitializeInstruction{
 		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 4),
 	}
-	nd.AccountMetaSlice[1] = ag_solanago.Meta(Addresses["FtdxWoZXZKNYn1Dx9XXDE5hKXWf69tjFJUofNZuaWUH3"]).SIGNER()
+	nd.AccountMetaSlice[1] = ag_solanago.Meta(Addresses["CdvSq48QUukYuMczgZAVNZrwcHNshBdtqrjW26sQiGPs"]).SIGNER()
 	nd.AccountMetaSlice[3] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
 	return nd
 }

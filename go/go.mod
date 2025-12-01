@@ -1,6 +1,6 @@
 module github.com/polymerdao/solana-prover-contracts/go
 
-go 1.24.2
+go 1.25.4
 
 require (
 	github.com/davecgh/go-spew v1.1.1
