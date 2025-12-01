@@ -1,6 +1,6 @@
 [package]
 name = "polymer-prover"
-version = "1.0.2"
+version = "1.0.3"
 description = "Polymer prover program"
 edition = "2021"
 
