@@ -26,7 +26,7 @@ jobs:
         uses: ./.github/actions/build
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          program_keypair: ${{ secrets.PROGRAM_KEYPAIR_DEVNET }}
+          program_keypair: ${{ secrets.PROGRAM_KEYPAIR_MAIN }}
           program_keypair_devnet: ${{ secrets.PROGRAM_KEYPAIR_DEVNET }}
           program_keypair_main: ${{ secrets.PROGRAM_KEYPAIR_MAIN }}
 
