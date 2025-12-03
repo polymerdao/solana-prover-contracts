@@ -89,6 +89,8 @@ main() {
 	mkdir -p "$deploy_dir"
 	cp "$so_file" "$deploy_dir/polymer_prover.so"
 
+	echo "> verifying deployment of program-id '$PROGRAM_ID' on solana cluster '$solana_cluster'"
+
 	solana-verify verify-from-repo \
 		--remote \
 		--url "$solana_cluster" \
