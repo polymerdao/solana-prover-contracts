@@ -19,7 +19,10 @@ check_env() {
 main() {
 	check_env
 
+	# install the solana sdk
 	. "$ROOT/scripts/solana.sh"
+	# install solana-verify
+	. "$ROOT/scripts/solana-verify.sh"
 
 	# calculate the program id from the provided keypair
 	ID="$(solana address -k - <<<"$PROGRAM_KEYPAIR")"
@@ -32,7 +35,7 @@ main() {
 
 	# build the binary and rename it according to the type. This should be dev or main
 	make build-verifiable
-	mv "$ROOT/target/verifiable/polymer_prover.so" "$ROOT/target/verifiable/polymer_prover.${TYPE}.so"
+	mv "$ROOT/target/deploy/polymer_prover.so" "$ROOT/target/deploy/polymer_prover.${TYPE}.so"
 
 	# clean up the new id
 	git checkout -- "$ROOT/programs/polymer-prover/src/lib.rs"

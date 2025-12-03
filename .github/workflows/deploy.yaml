@@ -36,6 +36,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      # this is needed by cargo in the next step
+      - name: Install hidapi dependencies
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install -y pkg-config build-essential libudev-dev
+
       - name: Deploy
         run: |
           # provide the keypairs via these temp files for easier testing
