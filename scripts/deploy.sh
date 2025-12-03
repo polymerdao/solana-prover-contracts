@@ -33,6 +33,8 @@ main() {
 
 	# install the solana sdk
 	. "$ROOT/scripts/solana.sh"
+	# install solana-verify
+	. "$ROOT/scripts/solana-verify.sh"
 
 	local solana_cluster=''
 
@@ -47,17 +49,12 @@ main() {
 
 	echo "> using polymer environment '$POLYMER_ENV' and solana cluster '$solana_cluster'"
 
-	# this takes care of checking if the cluster is valid
-	solana config set --url "$solana_cluster"
-
-	solana config set --keypair "$KEYPAIR_FILE"
-
-	# the release downloader fetches the latest release by default but the tag must be empty
-	# using 'latest' will not work
-	local tag=''
-	if [ "$VERSION" != 'latest' ]; then
-		tag="$VERSION"
+	local tag="$VERSION"
+	if [ "$tag" = 'latest' ]; then
+		tag="$(gh release list --limit 1 --json tagName --template '{{(index . 0).tagName}}')"
 	fi
+
+	echo "> downloading release artifacts for tag '$tag'"
 
 	# this errors out if the $tag is not found causing the script to fail
 	gh release download "$tag" \
@@ -68,20 +65,47 @@ main() {
 
 	so_file="$ROOT/release/polymer_prover.${TYPE}.so"
 
-	# Fail early if the artifact wasn’t found
+	# Fail early if the artifact wasn't found
 	if [ ! -f "$so_file" ]; then
-		echo "artefact '$so_file' not found; did the build for TYPE='$TYPE' succeed?" >&2
+		echo "artifact '$so_file' not found; did the build for TYPE='$TYPE' succeed?" >&2
 		exit 1
 	fi
 
-	echo "> deploying '$so_file' to solana cluster '$solana_cluster'"
+	# calculate the program id from the provided keypair
+	PROGRAM_ID="$(solana address -k "$PROGRAM_KEYPAIR_FILE")"
+
+	echo "> deploying '$so_file' with program-id '$PROGRAM_ID' to solana cluster '$solana_cluster'"
 
 	# finally, deploy the program
 	solana program deploy \
 		"$so_file" \
+		--keypair "$KEYPAIR_FILE" \
+		--url "$solana_cluster" \
 		--program-id "$PROGRAM_KEYPAIR_FILE" \
 		--commitment confirmed \
 		--verbose
+
+	deploy_dir="$ROOT/target/deploy"
+	mkdir -p "$deploy_dir"
+	cp "$so_file" "$deploy_dir/polymer_prover.so"
+
+	echo "> verifying deployment of program-id '$PROGRAM_ID' on solana cluster '$solana_cluster'"
+
+	args=(
+		'--remote'
+		'--url' "$solana_cluster"
+		'--program-id' "$PROGRAM_ID"
+		'--library-name' 'polymer_prover'
+		'--skip-prompt'
+		'--skip-build'
+		'--current-dir'
+		'--commit-hash' "$tag"
+		'https://github.com/polymerdao/solana-prover-contracts'
+	)
+
+	if ! solana-verify verify-from-repo "${args[@]}"; then
+		echo "> could not verify program!" >&2
+	fi
 }
 
 main "$@"
