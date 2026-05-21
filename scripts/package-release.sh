@@ -17,6 +17,12 @@ main() {
 		cp "$so_file" "$release_dir"
 	done
 
+	# include the IDL so `anchor idl init/upgrade` can be run during deploy.
+	# the IDL is produced by `anchor build` (via ci.sh's `make build`).
+	local idl_src="$ROOT/target/idl/polymer_prover.json"
+	if [ -f "$idl_src" ]; then
+		cp "$idl_src" "$release_dir/polymer_prover.idl.json"
+	fi
 }
 
 main "$@"

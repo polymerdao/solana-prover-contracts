@@ -124,6 +124,52 @@ main() {
 	if ! solana-verify verify-from-repo "${args[@]}"; then
 		echo "> could not verify program!" >&2
 	fi
+
+	if ! publish_idl "$tag"; then
+		echo "> could not publish IDL!" >&2
+	fi
+}
+
+publish_idl() {
+	if [ "$POLYMER_ENV" != 'mainnet' ]; then
+		echo "> skipping IDL publish since POLYMER_ENV='$POLYMER_ENV' is not 'mainnet'"
+		return 0
+	fi
+
+	local tag="$1"
+	local idl_file="$ROOT/release/polymer_prover.idl.json"
+
+	echo "> publishing IDL for program-id '$PROGRAM_ID'"
+
+	if [ ! -f "$idl_file" ]; then
+		gh release download "$tag" \
+			--repo polymerdao/solana-prover-contracts \
+			--pattern 'polymer_prover.idl.json' \
+			--clobber \
+			--dir "$ROOT/release"
+	fi
+	if [ ! -f "$idl_file" ]; then
+		echo "> IDL not found in release artifacts for tag '$tag'" >&2
+		return 1
+	fi
+
+	# anchor cli is needed only for the IDL step; install lazily.
+	ANCHOR_VERSION="$(yq '.dependencies.anchor-lang' "$ROOT/programs/polymer-prover/Cargo.toml")"
+	export ANCHOR_VERSION
+	. "$ROOT/scripts/anchor.sh"
+
+	local idl_cmd='init'
+	if anchor idl fetch "$PROGRAM_ID" --provider.cluster "$solana_rpc_url" >/dev/null 2>&1; then
+		idl_cmd='upgrade'
+		echo "> on-chain IDL exists; upgrading"
+	else
+		echo "> no on-chain IDL; initializing"
+	fi
+
+	anchor idl "$idl_cmd" "$PROGRAM_ID" \
+		--filepath "$idl_file" \
+		--provider.cluster "$solana_rpc_url" \
+		--provider.wallet "$KEYPAIR_FILE"
 }
 
 main "$@"
