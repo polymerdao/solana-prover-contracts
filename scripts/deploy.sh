@@ -36,18 +36,18 @@ main() {
 	# install solana-verify
 	. "$ROOT/scripts/solana-verify.sh"
 
-	local solana_cluster=''
+	local solana_rpc_url=''
 
 	case "$POLYMER_ENV" in
-	devnet | testnet) solana_cluster='devnet' ;;
-	shadownet | mainnet) solana_cluster='mainnet-beta' ;;
+	devnet | testnet) solana_rpc_url='https://api.devnet.solana.com' ;;
+	shadownet | mainnet) solana_rpc_url='https://api.mainnet-beta.solana.com' ;;
 	*)
 		echo "unknown POLYMER_ENV '$POLYMER_ENV'" >&2
 		exit 1
 		;;
 	esac
 
-	echo "> using polymer environment '$POLYMER_ENV' and solana cluster '$solana_cluster'"
+	echo "> using polymer environment '$POLYMER_ENV' and solana rpc '$solana_rpc_url'"
 
 	local tag="$VERSION"
 	if [ "$tag" = 'latest' ]; then
@@ -74,13 +74,13 @@ main() {
 	# calculate the program id from the provided keypair
 	PROGRAM_ID="$(solana address -k "$PROGRAM_KEYPAIR_FILE")"
 
-	echo "> deploying '$so_file' with program-id '$PROGRAM_ID' to solana cluster '$solana_cluster'"
+	echo "> deploying '$so_file' with program-id '$PROGRAM_ID' to '$solana_rpc_url'"
 
 	# finally, deploy the program
 	solana program deploy \
 		"$so_file" \
 		--keypair "$KEYPAIR_FILE" \
-		--url "$solana_cluster" \
+		--url "$solana_rpc_url" \
 		--program-id "$PROGRAM_KEYPAIR_FILE" \
 		--commitment confirmed \
 		--verbose
@@ -89,13 +89,31 @@ main() {
 	mkdir -p "$deploy_dir"
 	cp "$so_file" "$deploy_dir/polymer_prover.so"
 
-	echo "> verifying deployment of program-id '$PROGRAM_ID' on solana cluster '$solana_cluster'"
+	echo "> verifying deployment of program-id '$PROGRAM_ID' on '$solana_rpc_url'"
 
-	args=(
-		'--remote'
-		'--url' "$solana_cluster"
+	# solana-verify (through v0.4.11+) always reads ~/.config/solana/cli/config.yml
+	# before honoring --keypair, so make sure that file exists. the contents are
+	# overridden by --keypair for actual signing.
+	solana config set --url "$solana_rpc_url" --keypair "$KEYPAIR_FILE" >/dev/null
+
+	# verify.osec.io's remote build service only accepts mainnet programs, so
+	# we only pass --remote on mainnet. on other clusters we still upload the
+	# verification PDA so anyone can verify locally (solana-verify verify-from-repo
+	# without --remote against the same cluster).
+	args=()
+	if [ "$POLYMER_ENV" = 'mainnet' ]; then
+		args+=('--remote')
+	fi
+
+	# SOLANA_VERIFY_BASE_IMAGE comes from scripts/solana-verify.env via the
+	# sourced solana-verify.sh, shared with the Makefile so build and verify
+	# use the same image.
+	args+=(
+		'--url' "$solana_rpc_url"
+		'--keypair' "$KEYPAIR_FILE"
 		'--program-id' "$PROGRAM_ID"
 		'--library-name' 'polymer_prover'
+		'--base-image' "$SOLANA_VERIFY_BASE_IMAGE"
 		'--skip-prompt'
 		'--skip-build'
 		'--current-dir'
