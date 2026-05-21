@@ -4,11 +4,13 @@ PROVIDER_WALLET := ~/.config/solana/id.json
 build:
 	anchor build
 
+include scripts/solana-verify.env
+
 # use solana-verify to build a verifiable program instead of anchor build so we
-# can upload it to the Solana Verifiable Program Registry
+# can upload it to the Solana Verifiable Program Registry.
 .PHONY: build-verifiable
 build-verifiable:
-	solana-verify build --library-name polymer_prover
+	solana-verify build --library-name polymer_prover --base-image $(SOLANA_VERIFY_BASE_IMAGE)
 
 .PHONY: test
 test:
