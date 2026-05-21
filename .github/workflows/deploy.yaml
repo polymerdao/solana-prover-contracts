@@ -28,11 +28,11 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04-16core
+    runs-on: ubuntu-24.04-16core
     environment: ${{ inputs.polyenv }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
