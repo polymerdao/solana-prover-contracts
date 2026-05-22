@@ -114,32 +114,39 @@ Now, you can run the same tests against `devnet`
 anchor test --skip-deploy --provider.cluster devnet
 ```
 
-## Upgrading and verifying programs
+## Releasing and deploying
 
-For verifiable deployments, use Docker builds to ensure deterministic builds:
+Releases and deploys run through GitHub Actions.
+
+### Cut a release
+
+Pushing a `vX.Y.Z` tag triggers the release workflow, which produces a
+verifiable build and publishes the artifacts to a GitHub Release.
 
 ```bash
-# Build using Docker for deterministic/verifiable builds
-anchor build --verifiable --program-name mars
-
-# Upgrade the program on devnet
-anchor upgrade target/verifiable/mars.so \
-  --program-id 5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u \
-  --provider.cluster devnet
-
-# Initialize the IDL (required for verification, only needed once per program)
-anchor idl init 5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u \
-  --filepath target/idl/mars.json \
-  --provider.cluster devnet
-
-# Verify the deployed program matches your local code
-anchor verify 5d9Z6bsfZg8THSus5mtfpr5cF9eNQKqaPZWkUHMjgk6u \
-  --provider.cluster devnet \
-  --program-name mars
+make upgrade-version VERSION=x.y.z
+git push origin main
+git push origin vx.y.z
 ```
 
-Note: Verifiable builds use Docker to create deterministic binaries. Regular builds may produce
-different binaries each time due to timestamps, causing verification to fail.
+Pre-releases use a `-` suffix (e.g. `v1.0.4-rc0`) and have to be tagged by
+hand — `make upgrade-version` only accepts SEMVER.
+
+### Deploy
+
+Trigger the deploy workflow manually from the Actions tab. Pick an environment
+and a version (a release tag, or `latest`). Mainnet deploys additionally:
+
+- submit a remote verification job to the
+  [Solana Verified Programs Registry](https://verify.osec.io)
+- publish the Anchor IDL so block explorers can decode instruction names
+
+### Build reproducibility
+
+The verifiable build uses a Docker base image pinned by digest in
+[`scripts/solana-verify.env`](scripts/solana-verify.env). That file is the
+single source of truth — both the Makefile and the deploy script read from
+it. Bump it if you upgrade the `solana-program` version in `Cargo.lock`.
 
 ## go bindings
 
@@ -192,18 +199,21 @@ deployments.
 
 # initialization
 
-Once the program is deployed, it needs to be initialized. This is done by calling the `Initialize` instruction.
-This instruction will create the internal accounts needed by the program to function - ie validate proofs.
-Also, note that we need to sign the instruction with the program keypair to prevent front-running attacks.
-You can do that with the `proverctl` tool:
+A first-time deploy is not functional until `Initialize` is called — it
+creates the `InternalAccount` PDA that every functional instruction reads
+from. Upgrades preserve state, so re-init is **not** needed on a routine
+version bump.
+
+The instruction must be co-signed by the program keypair (anti-frontrunning).
+The [`proverctl`](tools/proverctl) tool handles this:
 
 ```bash
 ./target/release/proverctl \
-    --cluster https://api.devnet.solana.com \
-    --keypair-path /path/to/your/keypair.json \
-    --program-keypair /path/to/your/program-keypair.json \
+    --cluster <rpc-url> \
+    --keypair-path /path/to/payer-keypair.json \
+    --program-keypair /path/to/program-keypair.json \
     initialize \
-    --client-type 'client_type' \
-    --signer-addr '0xYourSignerAddress' \
-    --peptide-chain-id 'peptide_chain_id' \
+    --client-type 'proof_api' \
+    --signer-addr '0x...' \
+    --peptide-chain-id <id>
 ```
